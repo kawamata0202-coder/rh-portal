@@ -1285,6 +1285,7 @@ async function loadNotices(){
   const {data}=await db.from('notices').select('*').order('created_at',{ascending:false});
   if(!data||data.length===0){el.innerHTML='<div class="empty">お知らせはまだありません</div>';return;}
   const ids=data.map(n=>n.id);
+  data.forEach(n=>noticeCache[n.id]=n);
   const {data:likes}=await db.from('notice_likes').select('*').in('notice_id',ids);
   el.innerHTML=data.map(n=>{
     const noticeLikes=(likes||[]).filter(l=>l.notice_id===n.id);
@@ -1296,7 +1297,7 @@ async function loadNotices(){
         <span class="badge ${n.badge==='info'?'badge-info':'badge-staff'}">${n.badge==='info'?'お知らせ':'従業員投稿'}</span>
         <span class="notice-title">${esc(n.title)}</span>
         ${canEdit?`<div style="margin-left:auto;display:flex;gap:4px;">
-          <button onclick="openEditNoticeModal(${n.id},'${encodeURIComponent(n.title.replace(/'/g,\"\\\'\" ))}','${encodeURIComponent(n.body.replace(/'/g,\"\\\'\" ))}')" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:12px;">✏️</button>
+          <button onclick="openNoticeEdit(${n.id})" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:12px;">✏️</button>
           <button onclick="deleteNotice(${n.id})" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:12px;">🗑️</button>
         </div>`:''}
       </div>
@@ -1332,10 +1333,14 @@ async function deleteNotice(id){
   loadNotices();
 }
 
-function openEditNoticeModal(id,titleEnc,bodyEnc){
+// noticeデータをキャッシュ
+let noticeCache={};
+function openNoticeEdit(id){
+  const n=noticeCache[id];
+  if(!n)return;
   document.getElementById('en-id').value=id;
-  document.getElementById('en-title').value=decodeURIComponent(titleEnc);
-  document.getElementById('en-body').value=decodeURIComponent(bodyEnc);
+  document.getElementById('en-title').value=n.title;
+  document.getElementById('en-body').value=n.body;
   document.getElementById('en-error').textContent='';
   openModal('edit-notice-modal');
 }
