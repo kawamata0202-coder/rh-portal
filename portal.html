@@ -78,9 +78,9 @@ html,body{height:100%;font-family:var(--font);background:var(--bg);color:var(--t
 /* BOTTOM NAV */
 .bottomnav{display:none;position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--border);z-index:50;}
 .bottomnav-inner{display:flex;justify-content:space-around;}
-.bn-item{display:flex;flex-direction:column;align-items:center;padding:8px 4px;font-size:10px;color:var(--text-muted);cursor:pointer;flex:1;gap:2px;}
+.bn-item{display:flex;flex-direction:column;align-items:center;padding:6px 2px;font-size:9px;color:var(--text-muted);cursor:pointer;flex:1;gap:1px;}
 .bn-item.active{color:var(--orange);}
-.bn-icon{font-size:20px;}
+.bn-icon{font-size:18px;}
 
 /* COMPONENTS */
 .btn{padding:8px 14px;font-size:12px;border-radius:var(--radius);cursor:pointer;font-weight:600;border:none;transition:all .12s;}
@@ -1715,12 +1715,16 @@ function renderFixedNav(){
 function renderBottomNav(){
   const el=document.getElementById('bottom-nav-inner');
   if(!el)return;
-  const visible=menuSettings.filter(m=>m.is_visible).slice(0,5);
-  el.innerHTML=visible.map((m,idx)=>`
-    <div class="bn-item ${idx===0?'active':''}" onclick="switchTab('${m.key}',null);setBottomNav(this)">
-      <span class="bn-icon">${m.icon}</span>${esc(m.label)}
-    </div>`).join('')+
-    `<div class="bn-item" onclick="confirmLogout()"><span class="bn-icon">⏏️</span>ログアウト</div>`;
+  // 施術関連カテゴリを取得
+  const shijutsuCat=allCategories.find(c=>c.name==='施術関連'&&c.type==='custom');
+  el.innerHTML=`
+    <div class="bn-item active" onclick="switchTab('notice',null);setBottomNav(this)"><span class="bn-icon">🔔</span>お知らせ</div>
+    <div class="bn-item" onclick="switchTab('attendance',null);setBottomNav(this)"><span class="bn-icon">🕐</span>勤怠</div>
+    <div class="bn-item" onclick="switchTab('rules',null);setBottomNav(this)"><span class="bn-icon">📋</span>規則</div>
+    ${shijutsuCat?`<div class="bn-item" onclick="switchToCustomCat(${shijutsuCat.id},'施術関連','📖',null);setBottomNav(this)"><span class="bn-icon">📖</span>施術</div>`:''}
+    <div class="bn-item" onclick="switchTab('contact',null);setBottomNav(this)"><span class="bn-icon">📞</span>連絡先</div>
+    <div class="bn-item" onclick="confirmLogout()"><span class="bn-icon">⏏️</span>ログアウト</div>
+  `;
 }
 
 async function loadMenuSettingsList(){
