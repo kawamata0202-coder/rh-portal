@@ -277,6 +277,23 @@ html,body{height:100%;font-family:var(--font);background:var(--bg);color:var(--t
 </head>
 <body>
 
+<!-- お知らせ編集モーダル -->
+<div class="modal-overlay" id="edit-notice-modal">
+  <div class="modal">
+    <h3>お知らせを編集</h3>
+    <input type="hidden" id="en-id">
+    <label>タイトル</label>
+    <input type="text" id="en-title" placeholder="タイトル">
+    <label>内容</label>
+    <textarea id="en-body" placeholder="内容を入力..."></textarea>
+    <div class="error-msg" id="en-error"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('edit-notice-modal')">キャンセル</button>
+      <button class="btn btn-orange" onclick="saveNoticeEdit()">保存</button>
+    </div>
+  </div>
+</div>
+
 <!-- 連絡先編集モーダル -->
 <div class="modal-overlay" id="edit-contact-modal">
   <div class="modal">
@@ -1263,25 +1280,77 @@ function printSummary(){
 
 // ===== NOTICES =====
 async function loadNotices(){
-  const {data}=await db.from('notices').select('*').order('created_at',{ascending:false});
   const el=document.getElementById('notice-list');
   const isAdmin=currentProfile&&currentProfile.role==='admin';
+  const {data}=await db.from('notices').select('*').order('created_at',{ascending:false});
   if(!data||data.length===0){el.innerHTML='<div class="empty">お知らせはまだありません</div>';return;}
-  el.innerHTML=data.map(n=>`<div class="notice-item">
-    <div class="notice-header">
-      <span class="badge ${n.badge==='info'?'badge-info':'badge-staff'}">${n.badge==='info'?'お知らせ':'従業員投稿'}</span>
-      <span class="notice-title">${esc(n.title)}</span>
-      ${isAdmin?`<button onclick="deleteNotice(${n.id})" style="margin-left:auto;background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:12px;">🗑️</button>`:''}
-    </div>
-    <div class="notice-body">${esc(n.body)}</div>
-    <div class="notice-meta">${esc(n.poster_name||'')} · ${formatDate(n.created_at)}</div>
-  </div>`).join('');
+  const ids=data.map(n=>n.id);
+  const {data:likes}=await db.from('notice_likes').select('*').in('notice_id',ids);
+  el.innerHTML=data.map(n=>{
+    const noticeLikes=(likes||[]).filter(l=>l.notice_id===n.id);
+    const myLike=noticeLikes.find(l=>l.user_id===currentUser.id);
+    const likeNames=noticeLikes.map(l=>esc(l.user_name||'')).join('・');
+    const canEdit=isAdmin||(n.posted_by===currentUser.id);
+    return `<div class="notice-item" id="notice-${n.id}">
+      <div class="notice-header">
+        <span class="badge ${n.badge==='info'?'badge-info':'badge-staff'}">${n.badge==='info'?'お知らせ':'従業員投稿'}</span>
+        <span class="notice-title">${esc(n.title)}</span>
+        ${canEdit?`<div style="margin-left:auto;display:flex;gap:4px;">
+          <button onclick="openEditNoticeModal(${n.id},'${encodeURIComponent(n.title.replace(/'/g,\"\\\'\" ))}','${encodeURIComponent(n.body.replace(/'/g,\"\\\'\" ))}')" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:12px;">✏️</button>
+          <button onclick="deleteNotice(${n.id})" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:12px;">🗑️</button>
+        </div>`:''}
+      </div>
+      <div class="notice-body">${esc(n.body)}</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px;">
+        <div class="notice-meta">${esc(n.poster_name||'')} · ${formatDate(n.created_at)}</div>
+        <div style="display:flex;align-items:center;gap:6px;">
+          ${noticeLikes.length>0?`<span style="font-size:11px;color:var(--text-muted);">${likeNames.length>15?likeNames.slice(0,15)+'...':likeNames}</span>`:''}
+          <button onclick="toggleLike(${n.id})" style="background:${myLike?'var(--yellow-light)':'var(--bg)'};border:1px solid ${myLike?'var(--yellow)':'var(--border)'};border-radius:20px;padding:3px 10px;cursor:pointer;font-size:13px;">
+            👍 ${noticeLikes.length}
+          </button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function toggleLike(noticeId){
+  const {data:existing}=await db.from('notice_likes').select('id').eq('notice_id',noticeId).eq('user_id',currentUser.id).maybeSingle();
+  if(existing){
+    await db.from('notice_likes').delete().eq('notice_id',noticeId).eq('user_id',currentUser.id);
+  } else {
+    await db.from('notice_likes').insert({notice_id:noticeId,user_id:currentUser.id,user_name:currentProfile.name});
+  }
+  loadNotices();
 }
 
 async function deleteNotice(id){
   if(!confirm('このお知らせを削除しますか？'))return;
-  await db.from('notices').delete().eq('id',id);
-  showToast('削除しました');loadNotices();
+  const {error}=await db.from('notices').delete().eq('id',id);
+  if(error){showToast('削除に失敗しました');return;}
+  showToast('削除しました');
+  loadNotices();
+}
+
+function openEditNoticeModal(id,titleEnc,bodyEnc){
+  document.getElementById('en-id').value=id;
+  document.getElementById('en-title').value=decodeURIComponent(titleEnc);
+  document.getElementById('en-body').value=decodeURIComponent(bodyEnc);
+  document.getElementById('en-error').textContent='';
+  openModal('edit-notice-modal');
+}
+
+async function saveNoticeEdit(){
+  const id=document.getElementById('en-id').value;
+  const title=document.getElementById('en-title').value.trim();
+  const body=document.getElementById('en-body').value.trim();
+  const err=document.getElementById('en-error');
+  if(!title||!body){err.textContent='タイトルと内容を入力してください';return;}
+  const {error}=await db.from('notices').update({title,body}).eq('id',id);
+  if(error){err.textContent='保存に失敗しました';return;}
+  closeModal('edit-notice-modal');
+  showToast('更新しました');
+  loadNotices();
 }
 
 async function postStaffNotice(){
