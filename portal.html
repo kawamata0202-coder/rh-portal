@@ -864,7 +864,8 @@ async function initApp(user){
   loadNotices();
   loadTodayAttendance();
   await loadMenuSettings();
-  loadDynamicNav();
+  await loadDynamicNav();
+  renderBottomNav();
 }
 
 // ===== TAB =====
