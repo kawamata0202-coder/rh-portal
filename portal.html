@@ -560,6 +560,15 @@ html,body{height:100%;font-family:var(--font);background:var(--bg);color:var(--t
           <div class="post-form" id="notice-post-form" style="display:none;">
             <input type="text" id="notice-title-input" placeholder="タイトル">
             <textarea id="notice-body-input" placeholder="内容を入力..."></textarea>
+            <div style="margin-bottom:9px;">
+              <label style="font-size:12px;color:var(--text-sub);margin-bottom:4px;display:block;">画像を添付（任意）</label>
+              <div class="upload-area" id="notice-upload-area" onclick="document.getElementById('notice-image-file').click()" ondragover="onNoticeDragOver(event)" ondrop="onNoticeDrop(event)" style="padding:12px;min-height:60px;">
+                <div style="font-size:20px;">🖼️</div>
+                <p id="notice-upload-label" style="font-size:12px;color:var(--text-muted);margin-top:2px;">クリックまたはドラッグ&ドロップ</p>
+              </div>
+              <input type="file" id="notice-image-file" accept="image/*" style="display:none;" onchange="onNoticeImageSelect(event)">
+              <div id="notice-image-preview" style="margin-top:8px;display:none;"><img id="notice-preview-img" style="max-width:100%;max-height:200px;border-radius:8px;border:1px solid var(--border);" src=""><button onclick="clearNoticeImage()" style="display:block;margin-top:4px;font-size:12px;background:none;border:none;color:var(--danger);cursor:pointer;">✕ 画像を削除</button></div>
+            </div>
             <div class="post-actions">
               <select id="notice-badge-select" style="width:auto;padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius);font-size:12px;background:var(--bg);">
                 <option value="info">お知らせ（管理者）</option>
@@ -572,6 +581,15 @@ html,body{height:100%;font-family:var(--font);background:var(--bg);color:var(--t
           <div class="post-form" id="staff-post-form" style="display:none;">
             <input type="text" id="staff-notice-title" placeholder="タイトル">
             <textarea id="staff-notice-body" placeholder="共有したいことを入力..."></textarea>
+            <div style="margin-bottom:9px;">
+              <label style="font-size:12px;color:var(--text-sub);margin-bottom:4px;display:block;">画像を添付（任意）</label>
+              <div class="upload-area" id="staff-notice-upload-area" onclick="document.getElementById('staff-notice-image-file').click()" style="padding:12px;min-height:60px;">
+                <div style="font-size:20px;">🖼️</div>
+                <p id="staff-notice-upload-label" style="font-size:12px;color:var(--text-muted);margin-top:2px;">クリックまたはドラッグ&ドロップ</p>
+              </div>
+              <input type="file" id="staff-notice-image-file" accept="image/*" style="display:none;" onchange="onStaffNoticeImageSelect(event)">
+              <div id="staff-notice-image-preview" style="margin-top:8px;display:none;"><img id="staff-preview-img" style="max-width:100%;max-height:200px;border-radius:8px;border:1px solid var(--border);" src=""><button onclick="clearStaffNoticeImage()" style="display:block;margin-top:4px;font-size:12px;background:none;border:none;color:var(--danger);cursor:pointer;">✕ 画像を削除</button></div>
+            </div>
             <div class="post-actions">
               <span style="font-size:12px;color:var(--text-muted);">従業員投稿</span>
               <button class="btn btn-orange" onclick="postStaffNotice()">投稿する</button>
@@ -1302,6 +1320,7 @@ async function loadNotices(){
         </div>`:''}
       </div>
       <div class="notice-body">${esc(n.body)}</div>
+      ${n.image_url?`<img src="${n.image_url}" style="max-width:100%;border-radius:8px;margin-top:8px;cursor:pointer;" onclick="window.open('${n.image_url}','_blank')">`:''}
       <div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px;">
         <div class="notice-meta">${esc(n.poster_name||'')} · ${formatDate(n.created_at)}</div>
         <div style="display:flex;align-items:center;gap:6px;">
@@ -1313,6 +1332,56 @@ async function loadNotices(){
       </div>
     </div>`;
   }).join('');
+}
+
+let noticeImageFile=null;
+let staffNoticeImageFile=null;
+
+function onNoticeDragOver(e){e.preventDefault();document.getElementById('notice-upload-area').classList.add('drag');}
+function onNoticeDrop(e){e.preventDefault();document.getElementById('notice-upload-area').classList.remove('drag');const f=e.dataTransfer.files[0];if(f&&f.type.startsWith('image/'))setNoticeImage(f);}
+function onNoticeImageSelect(e){const f=e.target.files[0];if(f)setNoticeImage(f);}
+function setNoticeImage(f){
+  noticeImageFile=f;
+  document.getElementById('notice-upload-label').textContent=f.name;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    document.getElementById('notice-preview-img').src=e.target.result;
+    document.getElementById('notice-image-preview').style.display='block';
+  };
+  reader.readAsDataURL(f);
+}
+function clearNoticeImage(){
+  noticeImageFile=null;
+  document.getElementById('notice-upload-label').textContent='クリックまたはドラッグ&ドロップ';
+  document.getElementById('notice-image-preview').style.display='none';
+  document.getElementById('notice-image-file').value='';
+}
+
+function onStaffNoticeImageSelect(e){const f=e.target.files[0];if(f)setStaffNoticeImage(f);}
+function setStaffNoticeImage(f){
+  staffNoticeImageFile=f;
+  document.getElementById('staff-notice-upload-label').textContent=f.name;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    document.getElementById('staff-preview-img').src=e.target.result;
+    document.getElementById('staff-notice-image-preview').style.display='block';
+  };
+  reader.readAsDataURL(f);
+}
+function clearStaffNoticeImage(){
+  staffNoticeImageFile=null;
+  document.getElementById('staff-notice-upload-label').textContent='クリックまたはドラッグ&ドロップ';
+  document.getElementById('staff-notice-image-preview').style.display='none';
+  document.getElementById('staff-notice-image-file').value='';
+}
+
+async function uploadNoticeImage(file){
+  const ext=file.name.split('.').pop();
+  const path=`${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+  const {error}=await db.storage.from('notice-images').upload(path,file);
+  if(error)return null;
+  const {data}=db.storage.from('notice-images').getPublicUrl(path);
+  return data.publicUrl;
 }
 
 async function toggleLike(noticeId){
@@ -1362,10 +1431,13 @@ async function postStaffNotice(){
   const title=document.getElementById('staff-notice-title').value.trim();
   const body=document.getElementById('staff-notice-body').value.trim();
   if(!title||!body){showToast('タイトルと内容を入力してください');return;}
-  const {error}=await db.from('notices').insert({title,body,badge:'staff',posted_by:currentUser.id,poster_name:currentProfile.name});
+  let image_url=null;
+  if(staffNoticeImageFile){image_url=await uploadNoticeImage(staffNoticeImageFile);}
+  const {error}=await db.from('notices').insert({title,body,badge:'staff',posted_by:currentUser.id,poster_name:currentProfile.name,image_url});
   if(error){showToast('投稿に失敗しました');return;}
   document.getElementById('staff-notice-title').value='';
   document.getElementById('staff-notice-body').value='';
+  clearStaffNoticeImage();
   showToast('投稿しました');loadNotices();
 }
 
@@ -1374,10 +1446,13 @@ async function postNotice(){
   const body=document.getElementById('notice-body-input').value.trim();
   const badge=document.getElementById('notice-badge-select').value;
   if(!title||!body){showToast('タイトルと内容を入力してください');return;}
-  const {error}=await db.from('notices').insert({title,body,badge,posted_by:currentUser.id,poster_name:currentProfile.name});
+  let image_url=null;
+  if(noticeImageFile){image_url=await uploadNoticeImage(noticeImageFile);}
+  const {error}=await db.from('notices').insert({title,body,badge,posted_by:currentUser.id,poster_name:currentProfile.name,image_url});
   if(error){showToast('投稿に失敗しました');return;}
   document.getElementById('notice-title-input').value='';
   document.getElementById('notice-body-input').value='';
+  clearNoticeImage();
   showToast('投稿しました');loadNotices();
 }
 
