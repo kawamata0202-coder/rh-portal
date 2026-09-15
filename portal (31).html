@@ -1,0 +1,2297 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>ランナーズハイ 社内ポータル</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
+<style>
+:root{
+  --orange:#1A5FA5;--orange-dark:#154E8A;--orange-light:#EBF2FB;
+  --bg:#F5F7FA;--surface:#FFFFFF;--border:#D6E0EC;
+  --text:#0F1F35;--text-sub:#3D5470;--text-muted:#7A92AD;
+  --danger:#C0392B;--danger-light:#FDECEB;
+  --success:#1E7E4A;--success-light:#E8F5EE;
+  --blue:#1A5FA5;--blue-light:#EBF2FB;
+  --yellow:#D4A017;--yellow-light:#FEF3C7;
+  --accent:#F5C400;--accent-dark:#D4A800;--accent-light:#FFFBE6;
+  --radius:8px;--font:'Hiragino Kaku Gothic ProN','Hiragino Sans','Yu Gothic UI',Meiryo,sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;font-family:var(--font);background:var(--bg);color:var(--text);font-size:14px;}
+
+/* LOGIN */
+#login-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px;background:linear-gradient(135deg,#FFF8F3 0%,#F7F7F5 60%);}
+.login-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:36px 32px;width:100%;max-width:400px;box-shadow:0 4px 24px rgba(0,0,0,0.06);}
+.login-logo{text-align:center;margin-bottom:28px;}
+.logo-mark{width:52px;height:52px;background:var(--orange);border-radius:12px;display:inline-flex;align-items:center;justify-content:center;color:#fff;font-size:20px;font-weight:700;margin-bottom:12px;}
+.login-logo h1{font-size:17px;font-weight:600;}
+.login-logo p{font-size:12px;color:var(--text-muted);margin-top:4px;}
+.form-group{margin-bottom:14px;}
+.form-group label{display:block;font-size:12px;color:var(--text-sub);margin-bottom:5px;font-weight:500;}
+.form-group input{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:var(--radius);font-size:14px;font-family:var(--font);background:var(--bg);color:var(--text);}
+.form-group input:focus{outline:none;border-color:var(--orange);}
+.btn-primary{width:100%;padding:11px;background:var(--blue);color:#fff;border:none;border-radius:var(--radius);font-size:14px;font-weight:600;cursor:pointer;margin-top:4px;}
+.btn-primary:hover{background:var(--orange-dark);}
+.btn-primary:disabled{background:#ccc;cursor:not-allowed;}
+.login-hint{font-size:11px;color:var(--text-muted);text-align:center;margin-top:14px;}
+.error-msg{font-size:12px;color:var(--danger);margin-top:8px;text-align:center;min-height:16px;}
+
+/* APP SHELL */
+#app-screen{display:none;height:100vh;overflow:hidden;}
+#app-screen.visible{display:flex;flex-direction:column;}
+.topnav{display:none;align-items:center;justify-content:space-between;padding:0 16px;height:52px;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:50;}
+.topnav-logo{display:flex;align-items:center;gap:8px;}
+.topnav-logo .logo-sm{width:28px;height:28px;background:var(--orange);border-radius:6px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;font-weight:700;}
+.topnav-logo span{font-size:14px;font-weight:600;}
+.hamburger{background:none;border:none;font-size:22px;cursor:pointer;color:var(--text);padding:4px;}
+.app-body{display:flex;flex:1;overflow:hidden;}
+
+/* SIDEBAR */
+.sidebar{width:220px;min-width:220px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;transition:transform .2s;}
+.sidebar-header{padding:16px;border-bottom:1px solid var(--border);}
+.sidebar-logo{display:flex;align-items:center;gap:9px;}
+.logo-sm{width:30px;height:30px;background:var(--orange);border-radius:7px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;font-weight:700;}
+.sidebar-logo span{font-size:13px;font-weight:600;}
+.nav-section{padding:10px 0;flex:1;overflow-y:auto;}
+.nav-label{font-size:10px;color:var(--text-muted);padding:6px 16px 3px;letter-spacing:.05em;font-weight:600;}
+.nav-item{display:flex;align-items:center;gap:9px;padding:10px 16px;font-size:13px;color:var(--text-sub);cursor:pointer;border-left:2px solid transparent;transition:all .12s;}
+.nav-item:hover{background:var(--bg);color:var(--text);}
+.nav-item.active{color:var(--orange);border-left-color:var(--orange);background:var(--orange-light);}
+.nav-icon{font-size:16px;width:18px;text-align:center;}
+.sidebar-footer{padding:12px 16px;border-top:1px solid var(--border);}
+.user-row{display:flex;align-items:center;gap:9px;}
+.user-avatar{width:30px;height:30px;border-radius:50%;background:var(--orange);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;}
+.user-info{flex:1;overflow:hidden;}
+.user-name{font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.user-role-label{font-size:11px;color:var(--text-muted);}
+.logout-btn{background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:18px;padding:2px;}
+.logout-btn:hover{color:var(--danger);}
+
+/* MAIN */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+.topbar{padding:13px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:var(--surface);}
+.topbar-title{font-size:15px;font-weight:600;}
+.content-area{flex:1;padding:20px;overflow-y:auto;}
+
+/* BOTTOM NAV */
+.bottomnav{display:none;position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--border);z-index:50;}
+.bottomnav-inner{display:flex;justify-content:space-around;}
+.bn-item{display:flex;flex-direction:column;align-items:center;padding:6px 2px;font-size:9px;color:var(--text-muted);cursor:pointer;flex:1;gap:1px;}
+.bn-item.active{color:var(--orange);}
+.bn-icon{font-size:18px;}
+
+/* COMPONENTS */
+.btn{padding:8px 14px;font-size:12px;border-radius:var(--radius);cursor:pointer;font-weight:600;border:none;transition:all .12s;}
+.btn-orange{background:var(--blue);color:#fff;}
+.btn-orange:hover{background:var(--orange-dark);}
+.btn-ghost{background:none;border:1px solid var(--border);color:var(--text-sub);}
+.btn-ghost:hover{background:var(--bg);}
+.btn-danger{background:var(--danger-light);color:var(--danger);border:none;}
+.btn-accent{background:var(--accent);color:#0F1F35;border:none;}
+.btn-accent:hover{background:var(--accent-dark);}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;margin-bottom:14px;overflow:hidden;}
+.card-header{padding:13px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;}
+.card-title{font-size:13px;font-weight:600;}
+.badge{font-size:11px;padding:2px 9px;border-radius:20px;font-weight:600;}
+.badge-info{background:var(--blue-light);color:var(--blue);}
+.badge-staff{background:var(--orange-light);color:var(--orange-dark);}
+.badge-admin{background:#EDE9FE;color:#5B21B6;}
+.badge-active{background:var(--success-light);color:var(--success);}
+.badge-inactive{background:var(--danger-light);color:var(--danger);}
+
+/* NOTICE */
+.notice-item{border-bottom:1px solid var(--border);padding:14px 16px;}
+.notice-item:last-child{border-bottom:none;}
+.notice-header{display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap;}
+.notice-title{font-size:14px;font-weight:600;}
+.notice-body{font-size:13px;color:var(--text-sub);line-height:1.65;}
+.notice-meta{font-size:11px;color:var(--text-muted);margin-top:8px;}
+.post-form{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:16px;}
+.post-form input[type=text],.post-form textarea,.post-form select{width:100%;padding:9px 11px;border:1px solid var(--border);border-radius:var(--radius);font-size:13px;font-family:var(--font);background:var(--bg);color:var(--text);margin-bottom:9px;}
+.post-form input:focus,.post-form textarea:focus{outline:none;border-color:var(--orange);}
+.post-form textarea{resize:vertical;min-height:80px;}
+.post-actions{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+
+/* DOC */
+.doc-item{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .1s;}
+.doc-item:last-child{border-bottom:none;}
+.doc-item:hover{background:var(--bg);}
+.doc-icon{width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;}
+.doc-icon.orange{background:var(--orange-light);}
+.doc-icon.blue{background:var(--blue-light);}
+.doc-info{flex:1;min-width:0;}
+.doc-name{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.doc-meta{font-size:11px;color:var(--text-muted);margin-top:2px;}
+
+/* CONTACT */
+.contact-item{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);}
+.contact-item:last-child{border-bottom:none;}
+.contact-avatar{width:36px;height:36px;border-radius:50%;background:var(--orange);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;}
+.contact-info{flex:1;}
+.contact-name{font-size:13px;font-weight:600;}
+.contact-role{font-size:11px;color:var(--text-muted);}
+
+/* ATTENDANCE CLOCK */
+.attendance-clock{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:14px;text-align:center;}
+.clock-time{font-size:38px;font-weight:700;letter-spacing:2px;margin-bottom:2px;font-variant-numeric:tabular-nums;}
+.clock-date{font-size:13px;color:var(--text-muted);margin-bottom:14px;}
+.clock-status-row{display:flex;gap:8px;justify-content:center;margin-bottom:14px;flex-wrap:wrap;}
+.clock-status{font-size:12px;font-weight:600;padding:5px 14px;border-radius:20px;}
+.status-out{background:var(--bg);color:var(--text-muted);}
+.status-in{background:var(--success-light);color:var(--success);}
+.status-break{background:var(--yellow-light);color:var(--yellow);}
+.clock-btns{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;}
+.clock-btn{padding:12px 24px;font-size:14px;font-weight:700;border-radius:10px;border:none;cursor:pointer;}
+.btn-clockin{background:var(--accent);color:#0F1F35;font-weight:700;}
+.btn-clockin:hover{background:var(--accent-dark);}
+.btn-clockout{background:var(--success-light);color:var(--success);border:1px solid var(--success);}
+.btn-breakstart{background:var(--yellow-light);color:var(--yellow);border:1px solid #D97706;}
+.btn-breakend{background:#FEF3C7;color:#92400E;border:1px solid #D97706;}
+
+/* ATTENDANCE LIST */
+.att-row{border-bottom:1px solid var(--border);padding:12px 16px;}
+.att-row:last-child{border-bottom:none;}
+.att-row-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;}
+.att-row-date{font-size:13px;font-weight:600;}
+.att-times{display:flex;gap:16px;font-size:12px;flex-wrap:wrap;margin-bottom:4px;}
+.att-time-item{display:flex;flex-direction:column;gap:1px;}
+.att-time-label{font-size:10px;color:var(--text-muted);}
+.att-time-val{font-weight:600;color:var(--text);}
+.att-summary{display:flex;gap:12px;margin-top:6px;flex-wrap:wrap;}
+.att-summary-item{font-size:12px;}
+.att-summary-label{color:var(--text-muted);}
+.att-summary-val{font-weight:700;color:var(--orange);}
+.att-edit-btn{font-size:11px;padding:3px 8px;border-radius:4px;background:var(--blue-light);color:var(--blue);border:none;cursor:pointer;}
+.att-edit-btn:disabled{background:var(--bg);color:var(--text-muted);cursor:not-allowed;}
+.att-edited-badge{font-size:10px;background:var(--yellow-light);color:var(--yellow);padding:2px 6px;border-radius:4px;margin-left:4px;}
+.break-chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;}
+.break-chip{font-size:11px;background:var(--yellow-light);color:var(--yellow);padding:2px 8px;border-radius:4px;}
+
+/* REALTIME BOARD */
+.realtime-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-bottom:16px;}
+.staff-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px;}
+.staff-card.status-working{border-left:3px solid var(--success);}
+.staff-card.status-break{border-left:3px solid var(--yellow);}
+.staff-card.status-off{border-left:3px solid var(--border);}
+.staff-card.status-done{border-left:3px solid var(--blue);}
+.staff-card-header{display:flex;align-items:center;gap:8px;margin-bottom:10px;}
+.staff-card-avatar{width:32px;height:32px;border-radius:50%;background:var(--orange);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;}
+.staff-card-name{font-size:13px;font-weight:600;}
+.staff-card-status{font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px;}
+.sc-working{background:var(--success-light);color:var(--success);}
+.sc-break{background:var(--yellow-light);color:var(--yellow);}
+.sc-off{background:var(--bg);color:var(--text-muted);}
+.sc-done{background:var(--blue-light);color:var(--blue);}
+.staff-card-times{font-size:12px;color:var(--text-sub);display:flex;flex-direction:column;gap:3px;}
+.staff-card-time-row{display:flex;justify-content:space-between;}
+.staff-card-time-label{color:var(--text-muted);}
+.staff-card-duration{font-size:13px;font-weight:700;color:var(--orange);margin-top:6px;}
+
+/* MONTHLY SUMMARY TABLE */
+.summary-table-wrap{overflow-x:auto;}
+.summary-table{width:100%;border-collapse:collapse;font-size:12px;}
+.summary-table th{background:var(--bg);padding:8px 10px;text-align:left;font-weight:600;border-bottom:1px solid var(--border);white-space:nowrap;}
+.summary-table td{padding:8px 10px;border-bottom:1px solid var(--border);white-space:nowrap;}
+.summary-table tr:last-child td{border-bottom:none;}
+.summary-table tr:hover td{background:var(--bg);}
+.summary-table .total-row td{font-weight:700;background:var(--orange-light);color:var(--orange-dark);}
+
+/* ACCOUNT */
+.account-item{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border);}
+.account-item:last-child{border-bottom:none;}
+.account-info{flex:1;min-width:0;}
+.account-name{font-size:13px;font-weight:500;}
+.account-email{font-size:11px;color:var(--text-muted);}
+.account-actions{display:flex;gap:6px;flex-shrink:0;}
+
+/* FILE UPLOAD */
+.upload-area{border:2px dashed var(--border);border-radius:10px;padding:20px;text-align:center;cursor:pointer;transition:border-color .15s;margin-bottom:10px;}
+.upload-area:hover,.upload-area.drag{border-color:var(--orange);background:var(--orange-light);}
+.progress-bar{height:4px;background:var(--border);border-radius:2px;overflow:hidden;margin-top:8px;}
+.progress-fill{height:100%;background:var(--orange);transition:width .3s;}
+
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.35);display:none;align-items:center;justify-content:center;z-index:100;padding:16px;}
+.modal-overlay.show{display:flex;}
+.modal{background:var(--surface);border-radius:14px;padding:24px;width:100%;max-width:500px;border:1px solid var(--border);max-height:90vh;overflow-y:auto;}
+.modal h3{font-size:16px;font-weight:600;margin-bottom:16px;}
+.modal input,.modal textarea,.modal select{width:100%;padding:9px 11px;border:1px solid var(--border);border-radius:var(--radius);font-size:13px;font-family:var(--font);background:var(--bg);color:var(--text);margin-bottom:10px;}
+.modal input:focus,.modal textarea:focus{outline:none;border-color:var(--orange);}
+.modal textarea{min-height:70px;resize:vertical;}
+.modal label{font-size:12px;color:var(--text-sub);margin-bottom:4px;display:block;font-weight:500;}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;}
+.modal-notice{font-size:12px;color:var(--yellow);background:var(--yellow-light);border-radius:6px;padding:8px 12px;margin-bottom:12px;}
+.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.3);z-index:40;}
+.sidebar-overlay.show{display:block;}
+.toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#1A1A18;color:#fff;padding:10px 20px;border-radius:8px;font-size:13px;display:none;z-index:200;white-space:nowrap;}
+.toast.show{display:block;}
+.loading{text-align:center;padding:40px;color:var(--text-muted);font-size:13px;}
+.empty{text-align:center;padding:40px;color:var(--text-muted);font-size:13px;}
+
+/* QR CLOCK PAGE */
+#qr-clock-screen{display:none;align-items:center;justify-content:center;min-height:100vh;padding:20px;background:linear-gradient(135deg,#FFF8F3 0%,#F7F7F5 60%);}
+#qr-clock-screen.visible{display:flex;flex-direction:column;}
+.qr-clock-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:32px 28px;width:100%;max-width:400px;text-align:center;box-shadow:0 4px 24px rgba(0,0,0,0.06);}
+.qr-store-name{font-size:22px;font-weight:700;color:var(--orange);margin-bottom:4px;}
+.qr-clock-time{font-size:42px;font-weight:700;letter-spacing:2px;margin:16px 0 4px;font-variant-numeric:tabular-nums;}
+.qr-clock-date{font-size:13px;color:var(--text-muted);margin-bottom:20px;}
+.qr-user-info{font-size:14px;font-weight:600;margin-bottom:16px;padding:10px;background:var(--bg);border-radius:var(--radius);}
+.qr-btn{width:100%;padding:16px;font-size:18px;font-weight:700;border-radius:12px;border:none;cursor:pointer;margin-bottom:10px;}
+.qr-btn-in{background:var(--accent);color:#0F1F35;font-weight:700;}
+.qr-btn-out{background:var(--success-light);color:var(--success);border:1px solid var(--success);}
+.qr-btn-break{background:var(--yellow-light);color:var(--yellow);border:1px solid #D97706;}
+.qr-btn-breakend{background:#FEF3C7;color:#92400E;border:1px solid #D97706;}
+.qr-result{padding:14px;border-radius:var(--radius);font-size:14px;font-weight:600;margin-bottom:12px;}
+.qr-result.success{background:var(--success-light);color:var(--success);}
+.qr-result.error{background:var(--danger-light);color:var(--danger);}
+.qr-portal-link{font-size:13px;color:var(--text-muted);text-decoration:none;margin-top:8px;display:block;}
+
+/* PRINT */
+@media print{
+  #app-screen,body{height:auto;overflow:visible;}
+  .sidebar,.topnav,.bottomnav,.topbar,.no-print{display:none!important;}
+  .main{overflow:visible;}
+  .content-area{overflow:visible;padding:0;}
+  .tab-content{display:none!important;}
+  #print-area{display:block!important;}
+  .summary-table th,.summary-table td{font-size:11px;padding:5px 7px;}
+  @page{margin:15mm;}
+}
+#print-area{display:none;}
+
+@media(max-width:700px){
+  .topnav{display:flex;}
+  .sidebar{position:fixed;top:0;left:0;height:100vh;z-index:45;transform:translateX(-100%);}
+  .sidebar.open{transform:translateX(0);}
+  .main .topbar{display:none;}
+  .content-area{padding:16px;padding-bottom:80px;}
+  .bottomnav{display:block;}
+  #app-screen.visible{height:100dvh;}
+  .clock-time{font-size:30px;}
+  .clock-btn{padding:10px 18px;font-size:13px;}
+  .realtime-grid{grid-template-columns:1fr 1fr;}
+}
+</style>
+</head>
+<body>
+
+<!-- お知らせ編集モーダル -->
+<div class="modal-overlay" id="edit-notice-modal">
+  <div class="modal">
+    <h3>お知らせを編集</h3>
+    <input type="hidden" id="en-id">
+    <label>タイトル</label>
+    <input type="text" id="en-title" placeholder="タイトル">
+    <label>内容</label>
+    <textarea id="en-body" placeholder="内容を入力..."></textarea>
+    <div class="error-msg" id="en-error"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('edit-notice-modal')">キャンセル</button>
+      <button class="btn btn-orange" onclick="saveNoticeEdit()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 連絡先編集モーダル -->
+<div class="modal-overlay" id="edit-contact-modal">
+  <div class="modal">
+    <h3>連絡先を編集</h3>
+    <input type="hidden" id="ec-id">
+    <label>名前</label><input type="text" id="ec-name" placeholder="氏名または部署名">
+    <label>役職・役割</label><input type="text" id="ec-role" placeholder="例：大宮院 院長">
+    <label>店舗</label><input type="text" id="ec-store" placeholder="例：狭山ヶ丘院">
+    <label>電話番号</label><input type="text" id="ec-phone" placeholder="090-XXXX-XXXX">
+    <label>メール（任意）</label><input type="text" id="ec-email" placeholder="name@example.com">
+    <div class="error-msg" id="ec-error"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('edit-contact-modal')">キャンセル</button>
+      <button class="btn btn-orange" onclick="saveContactEdit()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- アカウント編集モーダル -->
+<div class="modal-overlay" id="edit-account-modal">
+  <div class="modal">
+    <h3>アカウントを編集</h3>
+    <input type="hidden" id="ea-user-id">
+    <label>名前</label>
+    <input type="text" id="ea-name" placeholder="田中 太郎">
+    <label>店舗</label>
+    <select id="ea-store" style="width:100%;padding:9px 11px;border:1px solid var(--border);border-radius:var(--radius);font-size:13px;background:var(--bg);color:var(--text);margin-bottom:10px;">
+      <option value="">選択してください</option>
+      <option value="狭山ヶ丘院">狭山ヶ丘院</option>
+      <option value="小手指院">小手指院</option>
+      <option value="豊島園院">豊島園院</option>
+      <option value="保谷院">保谷院</option>
+      <option value="飯能院">飯能院</option>
+      <option value="本部">本部</option>
+    </select>
+    <div class="error-msg" id="ea-error"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('edit-account-modal')">キャンセル</button>
+      <button class="btn btn-orange" onclick="saveAccountEdit()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- パスワードリセットモーダル -->
+<div class="modal-overlay" id="reset-pass-modal">
+  <div class="modal">
+    <h3>パスワードをリセット</h3>
+    <input type="hidden" id="rp-user-id">
+    <p style="font-size:13px;color:var(--text-sub);margin-bottom:12px;" id="rp-user-name"></p>
+    <label>新しいパスワード（8文字以上）</label>
+    <input type="text" id="rp-password" placeholder="新しいパスワードを入力">
+    <p style="font-size:12px;color:var(--text-muted);margin-top:-6px;margin-bottom:10px;">※ 設定後、本人に新しいパスワードを伝えてください。</p>
+    <div class="error-msg" id="rp-error"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('reset-pass-modal')">キャンセル</button>
+      <button class="btn btn-orange" id="rp-btn" onclick="savePasswordReset()">リセット</button>
+    </div>
+  </div>
+</div>
+
+<!-- メニュー編集モーダル -->
+<div class="modal-overlay" id="menu-edit-modal">
+  <div class="modal">
+    <h3>メニューを編集</h3>
+    <input type="hidden" id="me-id">
+    <label>表示名</label>
+    <input type="text" id="me-label" placeholder="例：お知らせ">
+    <label>アイコン（絵文字）</label>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;" id="menu-icon-picker">
+      <span onclick="selectMenuIcon(this)" style="font-size:24px;cursor:pointer;padding:4px;border-radius:6px;border:2px solid transparent;">🔔</span>
+      <span onclick="selectMenuIcon(this)" style="font-size:24px;cursor:pointer;padding:4px;border-radius:6px;border:2px solid transparent;">🕐</span>
+      <span onclick="selectMenuIcon(this)" style="font-size:24px;cursor:pointer;padding:4px;border-radius:6px;border:2px solid transparent;">📋</span>
+      <span onclick="selectMenuIcon(this)" style="font-size:24px;cursor:pointer;padding:4px;border-radius:6px;border:2px solid transparent;">📖</span>
+      <span onclick="selectMenuIcon(this)" style="font-size:24px;cursor:pointer;padding:4px;border-radius:6px;border:2px solid transparent;">📞</span>
+      <span onclick="selectMenuIcon(this)" style="font-size:24px;cursor:pointer;padding:4px;border-radius:6px;border:2px solid transparent;">📄</span>
+      <span onclick="selectMenuIcon(this)" style="font-size:24px;cursor:pointer;padding:4px;border-radius:6px;border:2px solid transparent;">📅</span>
+      <span onclick="selectMenuIcon(this)" style="font-size:24px;cursor:pointer;padding:4px;border-radius:6px;border:2px solid transparent;">📝</span>
+      <span onclick="selectMenuIcon(this)" style="font-size:24px;cursor:pointer;padding:4px;border-radius:6px;border:2px solid transparent;">📊</span>
+      <span onclick="selectMenuIcon(this)" style="font-size:24px;cursor:pointer;padding:4px;border-radius:6px;border:2px solid transparent;">📌</span>
+      <span onclick="selectMenuIcon(this)" style="font-size:24px;cursor:pointer;padding:4px;border-radius:6px;border:2px solid transparent;">🏥</span>
+      <span onclick="selectMenuIcon(this)" style="font-size:24px;cursor:pointer;padding:4px;border-radius:6px;border:2px solid transparent;">⚙️</span>
+    </div>
+    <input type="hidden" id="me-icon">
+    <label>表示順（数字が小さいほど上）</label>
+    <input type="number" id="me-order" min="1" max="99">
+    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+      <input type="checkbox" id="me-visible"> 表示する
+    </label>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('menu-edit-modal')">キャンセル</button>
+      <button class="btn btn-orange" onclick="saveMenuEdit()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- コンテンツ編集モーダル -->
+<div class="modal-overlay" id="content-edit-modal">
+  <div class="modal">
+    <h3>コンテンツを編集</h3>
+    <input type="hidden" id="ce-id">
+    <label>カテゴリ</label><select id="ce-category-id"></select>
+    <label>タイトル</label><input type="text" id="ce-title" placeholder="タイトル">
+    <label>本文（任意）</label><textarea id="ce-body" placeholder="内容を入力..."></textarea>
+    <label>ファイルURL（任意）</label>
+    <input type="text" id="ce-url" placeholder="https://...">
+    <label>ファイルを差し替え（任意）</label>
+    <div class="upload-area" id="ce-upload-area" onclick="document.getElementById('ce-file').click()" ondragover="onDragOver2(event)" ondrop="onDrop2(event)">
+      <div style="font-size:24px;">📎</div>
+      <p id="ce-upload-label" style="font-size:13px;color:var(--text-muted);margin-top:4px;">クリックまたはドラッグ&ドロップ</p>
+      <div class="progress-bar" id="ce-progress-bar" style="display:none;"><div class="progress-fill" id="ce-progress-fill" style="width:0%"></div></div>
+    </div>
+    <input type="file" id="ce-file" accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg" style="display:none;" onchange="onFileSelect2(event)">
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('content-edit-modal')">キャンセル</button>
+      <button class="btn btn-orange" onclick="saveContentEdit()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 従業員追加モーダル -->
+<div class="modal-overlay" id="add-user-modal">
+  <div class="modal">
+    <h3>従業員を追加</h3>
+    <label>名前</label>
+    <input type="text" id="new-user-name" placeholder="田中 太郎">
+    <label>メールアドレス</label>
+    <input type="email" id="new-user-email" placeholder="tanaka@example.com">
+    <label>パスワード（初期パスワード）</label>
+    <input type="password" id="new-user-pass" placeholder="8文字以上">
+    <p style="font-size:12px;color:var(--text-muted);margin-top:-6px;margin-bottom:10px;">※ 本人にこのパスワードを伝えてください。ログイン後に変更できます。</p>
+    <div class="error-msg" id="add-user-error"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('add-user-modal')">キャンセル</button>
+      <button class="btn btn-orange" id="add-user-btn" onclick="addUser()">追加する</button>
+    </div>
+  </div>
+</div>
+
+<!-- カテゴリ追加モーダル -->
+<div class="modal-overlay" id="category-modal">
+  <div class="modal">
+    <h3 id="category-modal-title">カテゴリを追加</h3>
+    <input type="hidden" id="cat-edit-id">
+    <label>カテゴリ名</label>
+    <input type="text" id="cat-name" placeholder="例：シフト表、研修資料、議事録">
+    <label>表示セクション</label>
+    <select id="cat-section" style="width:100%;padding:9px 11px;border:1px solid var(--border);border-radius:var(--radius);font-size:13px;background:var(--bg);color:var(--text);margin-bottom:10px;">
+      <option value="menu">メニュー（上部に表示）</option>
+      <option value="other">その他（下部に表示）</option>
+    </select>
+    <label>アイコン（絵文字）</label>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;" id="icon-picker">
+      <span onclick="selectIcon(this)" style="font-size:24px;cursor:pointer;padding:4px;border-radius:6px;border:2px solid transparent;">📄</span>
+      <span onclick="selectIcon(this)" style="font-size:24px;cursor:pointer;padding:4px;border-radius:6px;border:2px solid transparent;">📅</span>
+      <span onclick="selectIcon(this)" style="font-size:24px;cursor:pointer;padding:4px;border-radius:6px;border:2px solid transparent;">📝</span>
+      <span onclick="selectIcon(this)" style="font-size:24px;cursor:pointer;padding:4px;border-radius:6px;border:2px solid transparent;">📊</span>
+      <span onclick="selectIcon(this)" style="font-size:24px;cursor:pointer;padding:4px;border-radius:6px;border:2px solid transparent;">📌</span>
+      <span onclick="selectIcon(this)" style="font-size:24px;cursor:pointer;padding:4px;border-radius:6px;border:2px solid transparent;">🎓</span>
+      <span onclick="selectIcon(this)" style="font-size:24px;cursor:pointer;padding:4px;border-radius:6px;border:2px solid transparent;">💼</span>
+      <span onclick="selectIcon(this)" style="font-size:24px;cursor:pointer;padding:4px;border-radius:6px;border:2px solid transparent;">🏥</span>
+      <span onclick="selectIcon(this)" style="font-size:24px;cursor:pointer;padding:4px;border-radius:6px;border:2px solid transparent;">⚙️</span>
+      <span onclick="selectIcon(this)" style="font-size:24px;cursor:pointer;padding:4px;border-radius:6px;border:2px solid transparent;">📢</span>
+      <span onclick="selectIcon(this)" style="font-size:24px;cursor:pointer;padding:4px;border-radius:6px;border:2px solid transparent;">🗓️</span>
+      <span onclick="selectIcon(this)" style="font-size:24px;cursor:pointer;padding:4px;border-radius:6px;border:2px solid transparent;">📋</span>
+    </div>
+    <input type="hidden" id="cat-icon" value="📄">
+    <label>表示順（数字が小さいほど上に表示）</label>
+    <input type="number" id="cat-order" value="50" min="1" max="99">
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('category-modal')">キャンセル</button>
+      <button class="btn btn-orange" onclick="saveCategory()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- QR打刻画面 -->
+<div id="qr-clock-screen">
+  <div class="qr-clock-card">
+    <div style="width:40px;height:40px;background:var(--orange);border-radius:10px;display:inline-flex;align-items:center;justify-content:center;color:#fff;font-size:18px;font-weight:700;margin-bottom:12px;">RH</div>
+    <div class="qr-store-name" id="qr-store-name">読み込み中...</div>
+    <div style="font-size:12px;color:var(--text-muted);">ランナーズハイ</div>
+    <div class="qr-clock-time" id="qr-clock-time">--:--:--</div>
+    <div class="qr-clock-date" id="qr-clock-date"></div>
+    <div id="qr-login-area">
+      <p style="font-size:13px;color:var(--text-muted);margin-bottom:12px;">ログインして打刻してください</p>
+      <div style="text-align:left;">
+        <div class="form-group"><label>メールアドレス</label><input type="email" id="qr-email" placeholder="name@example.com" autocomplete="email"></div>
+        <div class="form-group"><label>パスワード</label><input type="password" id="qr-pass" placeholder="パスワード" autocomplete="current-password"></div>
+        <div class="error-msg" id="qr-login-error"></div>
+        <button class="btn-primary" onclick="qrDoLogin()">ログイン</button>
+      </div>
+    </div>
+    <div id="qr-punch-area" style="display:none;">
+      <div class="qr-user-info" id="qr-user-info"></div>
+      <div id="qr-result" style="display:none;"></div>
+      <button class="qr-btn qr-btn-in" id="qr-btn-in" onclick="qrClockIn()">🟠 出勤打刻</button>
+      <button class="qr-btn qr-btn-break" id="qr-btn-break" onclick="qrBreakStart()" style="display:none;">☕ 休憩開始</button>
+      <button class="qr-btn qr-btn-breakend" id="qr-btn-breakend" onclick="qrBreakEnd()" style="display:none;">✅ 休憩終了</button>
+      <button class="qr-btn qr-btn-out" id="qr-btn-out" onclick="qrClockOut()" style="display:none;">🟢 退勤打刻</button>
+      <button onclick="qrLogout()" style="background:none;border:none;font-size:12px;color:var(--text-muted);cursor:pointer;margin-top:8px;">別のアカウントでログイン</button>
+    </div>
+    <a href="/" class="qr-portal-link">← ポータルトップへ</a>
+  </div>
+</div>
+
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="logo-mark">RH</div>
+      <h1>ランナーズハイ 社内ポータル</h1>
+      <p>従業員専用 — メールアドレスでログイン</p>
+    </div>
+    <div class="form-group"><label>メールアドレス</label><input type="email" id="login-email" placeholder="name@example.com" autocomplete="email"></div>
+    <div class="form-group"><label>パスワード</label><input type="password" id="login-pass" placeholder="パスワード" autocomplete="current-password"></div>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+      <input type="checkbox" id="keep-login" checked style="width:16px;height:16px;accent-color:var(--blue);cursor:pointer;">
+      <label for="keep-login" style="font-size:13px;color:var(--text-sub);cursor:pointer;">ログイン状態を保持する（7日間）</label>
+    </div>
+    <div class="error-msg" id="login-error"></div>
+    <button class="btn-primary" id="login-btn" onclick="doLogin()">ログイン</button>
+    <p class="login-hint">アカウントは管理者が発行します。不明な場合は代表まで。</p>
+  </div>
+</div>
+
+<div id="app-screen">
+  <div class="topnav">
+    <div class="topnav-logo"><div class="logo-sm">RH</div><span>社内ポータル</span></div>
+    <button class="hamburger" onclick="toggleSidebar()">☰</button>
+  </div>
+  <div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
+  <div class="app-body">
+    <div class="sidebar" id="sidebar">
+      <div class="sidebar-header"><div class="sidebar-logo"><div class="logo-sm">RH</div><span>社内ポータル</span></div></div>
+      <div class="nav-section">
+        <div class="nav-label">メニュー</div>
+        <div id="fixed-nav"></div>
+        <!-- カスタムカテゴリメニュー（動的生成） -->
+        <div id="custom-nav"></div>
+        <div id="admin-nav" style="display:none;">
+          <div class="nav-label">管理者</div>
+          <div class="nav-item" onclick="switchTab('realtime',this)"><span class="nav-icon">🟢</span>本日の出勤状況</div>
+          <div class="nav-item" onclick="switchTab('manage-attendance',this)"><span class="nav-icon">📊</span>勤怠管理・PDF</div>
+          <div class="nav-item" onclick="switchTab('manage-qr',this)"><span class="nav-icon">📱</span>QRコード管理</div>
+          <div class="nav-item" onclick="switchTab('manage-category',this)"><span class="nav-icon">🗂️</span>メニュー・カテゴリ管理</div>
+          <div class="nav-item" onclick="switchTab('manage-account',this)"><span class="nav-icon">👥</span>アカウント管理</div>
+        </div>
+      </div>
+      <div class="sidebar-footer">
+        <div class="user-row">
+          <div class="user-avatar" id="user-avatar">…</div>
+          <div class="user-info"><div class="user-name" id="user-name">読込中</div><div class="user-role-label" id="user-role-label"></div></div>
+          <button class="logout-btn" onclick="doLogout()">⏏</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="main">
+      <div class="topbar"><span class="topbar-title" id="topbar-title">お知らせ</span><div id="topbar-actions"></div></div>
+      <div class="content-area">
+
+        <!-- お知らせ -->
+        <div id="tab-notice" class="tab-content">
+          <!-- 管理者のみ投稿フォーム表示 -->
+          <div class="post-form" id="notice-post-form" style="display:none;">
+            <input type="text" id="notice-title-input" placeholder="タイトル">
+            <textarea id="notice-body-input" placeholder="内容を入力..."></textarea>
+            <div style="margin-bottom:9px;">
+              <label style="font-size:12px;color:var(--text-sub);margin-bottom:4px;display:block;">画像を添付（任意）</label>
+              <div class="upload-area" id="notice-upload-area" onclick="document.getElementById('notice-image-file').click()" ondragover="onNoticeDragOver(event)" ondrop="onNoticeDrop(event)" style="padding:12px;min-height:60px;">
+                <div style="font-size:20px;">🖼️</div>
+                <p id="notice-upload-label" style="font-size:12px;color:var(--text-muted);margin-top:2px;">クリックまたはドラッグ&ドロップ</p>
+              </div>
+              <input type="file" id="notice-image-file" accept="image/*" style="display:none;" onchange="onNoticeImageSelect(event)">
+              <div id="notice-image-preview" style="margin-top:8px;display:none;"><img id="notice-preview-img" style="max-width:100%;max-height:200px;border-radius:8px;border:1px solid var(--border);" src=""><button onclick="clearNoticeImage()" style="display:block;margin-top:4px;font-size:12px;background:none;border:none;color:var(--danger);cursor:pointer;">✕ 画像を削除</button></div>
+            </div>
+            <div class="post-actions">
+              <select id="notice-badge-select" style="width:auto;padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius);font-size:12px;background:var(--bg);">
+                <option value="info">お知らせ（管理者）</option>
+                <option value="staff">従業員投稿</option>
+              </select>
+              <button class="btn btn-orange" onclick="postNotice()">投稿する</button>
+            </div>
+          </div>
+          <!-- 従業員投稿フォーム -->
+          <div class="post-form" id="staff-post-form" style="display:none;">
+            <input type="text" id="staff-notice-title" placeholder="タイトル">
+            <textarea id="staff-notice-body" placeholder="共有したいことを入力..."></textarea>
+            <div style="margin-bottom:9px;">
+              <label style="font-size:12px;color:var(--text-sub);margin-bottom:4px;display:block;">画像を添付（任意）</label>
+              <div class="upload-area" id="staff-notice-upload-area" onclick="document.getElementById('staff-notice-image-file').click()" style="padding:12px;min-height:60px;">
+                <div style="font-size:20px;">🖼️</div>
+                <p id="staff-notice-upload-label" style="font-size:12px;color:var(--text-muted);margin-top:2px;">クリックまたはドラッグ&ドロップ</p>
+              </div>
+              <input type="file" id="staff-notice-image-file" accept="image/*" style="display:none;" onchange="onStaffNoticeImageSelect(event)">
+              <div id="staff-notice-image-preview" style="margin-top:8px;display:none;"><img id="staff-preview-img" style="max-width:100%;max-height:200px;border-radius:8px;border:1px solid var(--border);" src=""><button onclick="clearStaffNoticeImage()" style="display:block;margin-top:4px;font-size:12px;background:none;border:none;color:var(--danger);cursor:pointer;">✕ 画像を削除</button></div>
+            </div>
+            <div class="post-actions">
+              <span style="font-size:12px;color:var(--text-muted);">従業員投稿</span>
+              <button class="btn btn-orange" onclick="postStaffNotice()">投稿する</button>
+            </div>
+          </div>
+          <div class="card"><div id="notice-list"><div class="loading">読み込み中...</div></div></div>
+        </div>
+
+        <!-- 勤怠打刻 -->
+        <div id="tab-attendance" class="tab-content" style="display:none;">
+          <div class="attendance-clock" id="admin-clock-area">
+            <div class="clock-time" id="clock-time">--:--:--</div>
+            <div class="clock-date" id="clock-date"></div>
+            <div class="clock-status-row">
+              <span class="clock-status status-out" id="clock-status">未出勤</span>
+              <span class="clock-status status-break" id="break-status" style="display:none;">休憩中</span>
+            </div>
+            <div class="clock-btns">
+              <button class="clock-btn btn-clockin" id="btn-clockin" onclick="clockIn()">出勤</button>
+              <button class="clock-btn btn-clockout" id="btn-clockout" onclick="clockOut()" style="display:none;">退勤</button>
+              <button class="clock-btn btn-breakstart" id="btn-breakstart" onclick="breakStart()" style="display:none;">休憩開始</button>
+              <button class="clock-btn btn-breakend" id="btn-breakend" onclick="breakEnd()" style="display:none;">休憩終了</button>
+            </div>
+          </div>
+          <!-- 従業員向け：QRコード案内 -->
+          <div id="staff-clock-notice" style="display:none;">
+            <div style="background:var(--orange-light);border:1px solid var(--border);border-radius:12px;padding:20px;text-align:center;margin-bottom:14px;">
+              <div style="font-size:36px;margin-bottom:8px;">📱</div>
+              <div style="font-size:15px;font-weight:600;margin-bottom:6px;">打刻はQRコードから</div>
+              <div style="font-size:13px;color:var(--text-sub);">院内に貼ってあるQRコードをスマホのカメラで読み取って出勤・退勤・休憩の打刻をしてください</div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header"><span class="card-title">今月の勤怠</span></div>
+            <div id="my-attendance-list"><div class="loading">読み込み中...</div></div>
+          </div>
+        </div>
+
+        <!-- 就業規則 -->
+        <div id="tab-rules" class="tab-content" style="display:none;">
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title" id="rules-title">就業規則・ルール</span>
+              <button class="btn btn-orange admin-only" style="display:none;" onclick="openContentModalForType('rules')">+ 追加</button>
+            </div>
+            <div id="rules-list"><div class="loading">読み込み中...</div></div>
+          </div>
+        </div>
+
+        <!-- マニュアル -->
+        <div id="tab-manual" class="tab-content" style="display:none;">
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title" id="manual-title">マニュアル</span>
+              <button class="btn btn-orange admin-only" style="display:none;" onclick="openContentModalForType('manual')">+ 追加</button>
+            </div>
+            <div id="manual-list"><div class="loading">読み込み中...</div></div>
+          </div>
+        </div>
+
+        <!-- 連絡先 -->
+        <div id="tab-contact" class="tab-content" style="display:none;">
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">スタッフ・緊急連絡先</span>
+              <button class="btn btn-orange admin-only" style="display:none;" onclick="openContactModal()">+ 追加</button>
+            </div>
+            <div id="contact-list"><div class="loading">読み込み中...</div></div>
+          </div>
+        </div>
+
+        <!-- リアルタイム出勤状況 -->
+        <div id="tab-realtime" class="tab-content" style="display:none;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+            <div style="font-size:12px;color:var(--text-muted);" id="realtime-updated"></div>
+            <button class="btn btn-ghost" onclick="loadRealtime()">🔄 更新</button>
+          </div>
+          <div id="realtime-summary" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;"></div>
+          <div id="realtime-grid" class="realtime-grid"><div class="loading">読み込み中...</div></div>
+        </div>
+
+        <!-- 勤怠管理・PDF -->
+        <div id="tab-manage-attendance" class="tab-content" style="display:none;">
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">月次勤怠集計</span>
+              <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                <select id="att-filter-month" onchange="loadMonthlySummary()" style="padding:5px 10px;border:1px solid var(--border);border-radius:var(--radius);font-size:12px;background:var(--bg);"></select>
+                <select id="att-filter-staff" onchange="loadMonthlySummary()" style="padding:5px 10px;border:1px solid var(--border);border-radius:var(--radius);font-size:12px;background:var(--bg);"><option value="">全スタッフ</option></select>
+                <button class="btn btn-orange no-print" onclick="printSummary()">🖨️ PDF・印刷</button>
+              </div>
+            </div>
+            <div id="monthly-summary"><div class="loading">読み込み中...</div></div>
+          </div>
+        </div>
+
+        <!-- カスタムカテゴリ表示（動的生成） -->
+        <div id="tab-custom-category" class="tab-content" style="display:none;">
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title" id="custom-cat-title"></span>
+              <button class="btn btn-orange admin-only" style="display:none;" id="custom-cat-add-btn">+ 追加</button>
+            </div>
+            <div id="custom-category-list"><div class="loading">読み込み中...</div></div>
+          </div>
+        </div>
+
+        <!-- カテゴリ管理 -->
+        <div id="tab-manage-category" class="tab-content" style="display:none;">
+          <div class="card" style="margin-bottom:14px;">
+            <div class="card-header">
+              <span class="card-title">固定メニュー設定</span>
+            </div>
+            <div id="menu-settings-list"><div class="loading">読み込み中...</div></div>
+          </div>
+          <div class="card" style="margin-bottom:14px;">
+            <div class="card-header">
+              <span class="card-title">カテゴリメニュー管理</span>
+              <button class="btn btn-orange" onclick="openCategoryModal()">+ 追加</button>
+            </div>
+            <div id="category-manage-list"><div class="loading">読み込み中...</div></div>
+          </div>
+          <div style="background:var(--blue-light);border-radius:10px;padding:14px 16px;font-size:12px;color:var(--blue);">
+            💡 追加したカテゴリはサイドバーに自動で表示されます。コンテンツは「コンテンツ管理」から追加してください。
+          </div>
+        </div>
+
+        <!-- QRコード管理 -->
+        <div id="tab-manage-qr" class="tab-content" style="display:none;">
+          <div class="card">
+            <div class="card-header"><span class="card-title">店舗別QRコード</span><button class="btn btn-ghost no-print" onclick="loadQRCodes()">🔄 更新</button></div>
+            <div id="qr-list"><div class="loading">読み込み中...</div></div>
+          </div>
+          <div style="background:var(--yellow-light);border-radius:10px;padding:14px 16px;font-size:12px;color:var(--yellow);margin-bottom:14px;">
+            💡 QRコードを院内に印刷して貼ってください。スタッフがスマホで読み取ると打刻画面が開きます。
+          </div>
+        </div>
+
+        <!-- コンテンツ管理 -->
+        <div id="tab-manage-content" class="tab-content" style="display:none;">
+          <div class="card" style="margin-bottom:14px;">
+            <div class="card-header"><span class="card-title">ファイル・コンテンツ</span><button class="btn btn-orange" onclick="openContentModal()">+ 追加</button></div>
+            <div id="content-manage-list"><div class="loading">読み込み中...</div></div>
+          </div>
+          <div class="card">
+            <div class="card-header"><span class="card-title">連絡先</span><button class="btn btn-orange" onclick="openContactModal()">+ 追加</button></div>
+            <div id="contact-manage-list"><div class="loading">読み込み中...</div></div>
+          </div>
+        </div>
+
+        <!-- アカウント管理 -->
+        <div id="tab-manage-account" class="tab-content" style="display:none;">
+          <div class="card">
+            <div class="card-header"><span class="card-title">従業員アカウント</span><button class="btn btn-orange" onclick="openAddUserModal()">+ 従業員を追加</button></div>
+            <div id="account-list"><div class="loading">読み込み中...</div></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <div class="bottomnav">
+    <div class="bottomnav-inner" id="bottom-nav-inner">
+    </div>
+  </div>
+</div>
+
+<!-- print area -->
+<div id="print-area"></div>
+
+<!-- MODALS -->
+<div class="modal-overlay" id="content-modal">
+  <div class="modal">
+    <h3>コンテンツを追加</h3>
+    <label>カテゴリ</label><select id="cm-category-id"></select>
+    <label>タイトル</label><input type="text" id="cm-title" placeholder="例：就業規則（2025年版）">
+    <label>本文（任意）</label><textarea id="cm-body" placeholder="内容を入力..."></textarea>
+    <label>ファイルをアップロード（任意）</label>
+    <div class="upload-area" id="upload-area" onclick="document.getElementById('cm-file').click()" ondragover="onDragOver(event)" ondrop="onDrop(event)">
+      <div style="font-size:24px;">📎</div>
+      <p id="upload-label" style="font-size:13px;color:var(--text-muted);margin-top:4px;">クリックまたはドラッグ&ドロップ</p>
+      <div class="progress-bar" id="progress-bar" style="display:none;"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+    </div>
+    <input type="file" id="cm-file" accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg" style="display:none;" onchange="onFileSelect(event)">
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('content-modal')">キャンセル</button>
+      <button class="btn btn-orange" onclick="saveContent()">保存</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="contact-modal">
+  <div class="modal">
+    <h3>連絡先を追加</h3>
+    <label>名前</label><input type="text" id="ct-name" placeholder="氏名または部署名">
+    <label>役職・役割</label><input type="text" id="ct-role" placeholder="例：大宮院 院長">
+    <label>店舗</label><input type="text" id="ct-store" placeholder="例：大宮院">
+    <label>電話番号</label><input type="text" id="ct-phone" placeholder="090-XXXX-XXXX">
+    <label>メール（任意）</label><input type="text" id="ct-email">
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('contact-modal')">キャンセル</button>
+      <button class="btn btn-orange" onclick="saveContact()">保存</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="detail-modal">
+  <div class="modal" style="max-width:600px;">
+    <h3 id="detail-title"></h3>
+    <div id="detail-body" style="font-size:13px;color:var(--text-sub);line-height:1.7;margin-bottom:12px;white-space:pre-wrap;max-height:40vh;overflow-y:auto;"></div>
+    <div id="detail-link" style="margin-bottom:16px;"></div>
+    <div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal('detail-modal')">閉じる</button></div>
+  </div>
+</div>
+
+<!-- 勤怠修正モーダル -->
+<div class="modal-overlay" id="edit-modal">
+  <div class="modal" style="max-width:540px;">
+    <h3>勤怠を修正</h3>
+    <div class="modal-notice" id="edit-notice"></div>
+    <input type="hidden" id="edit-att-id">
+    <label>出勤時刻</label><input type="datetime-local" id="edit-clockin">
+    <label>退勤時刻（空白=勤務中）</label><input type="datetime-local" id="edit-clockout">
+    <div id="edit-breaks-section">
+      <label style="margin-bottom:8px;">休憩時間の修正</label>
+      <div id="edit-breaks-list"></div>
+      <button class="btn btn-ghost" style="width:100%;margin-bottom:10px;" onclick="addBreakRow()">+ 休憩を追加</button>
+    </div>
+    <label>修正理由（必須）</label><textarea id="edit-reason" placeholder="例：打刻を忘れたため修正"></textarea>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('edit-modal')">キャンセル</button>
+      <button class="btn btn-orange" onclick="saveAttendanceEdit()">修正を保存</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const SUPABASE_URL='https://gedppyqxqdvzzpjojejc.supabase.co';
+const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdlZHBweXF4cWR2enpwam9qZWpjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg0NzA4MTAsImV4cCI6MjEwNDA0NjgxMH0.stTMpklim0HlSBeMuNQJdns18y3oxbbnMsfb691Tyz8';
+const {createClient}=supabase;
+const db=createClient(SUPABASE_URL,SUPABASE_KEY,{
+  auth:{
+    persistSession:true,
+    storageKey:'rh-portal-session',
+    storage:window.localStorage,
+    autoRefreshToken:true,
+  }
+});
+
+let currentUser=null,currentProfile=null,currentTab='notice';
+let todayRecord=null,activeBreak=null,selectedFile=null;
+let editBreaks=[];
+const EDIT_LIMIT_HOURS=48;
+let realtimeTimer=null;
+
+// ===== AUTH =====
+async function doLogin(){
+  const email=document.getElementById('login-email').value.trim();
+  const pass=document.getElementById('login-pass').value;
+  const btn=document.getElementById('login-btn');
+  const err=document.getElementById('login-error');
+  err.textContent='';
+  if(!email||!pass){err.textContent='メールアドレスとパスワードを入力してください';return;}
+  btn.disabled=true;btn.textContent='ログイン中...';
+  const {data:signInData,error}=await db.auth.signInWithPassword({email,password:pass});
+  btn.disabled=false;btn.textContent='ログイン';
+  if(error){err.textContent='メールアドレスまたはパスワードが正しくありません';return;}
+  await initApp(signInData.user);
+}
+function confirmLogout(){
+  if(confirm('ログアウトしますか？'))doLogout();
+}
+async function doLogout(){await db.auth.signOut();location.reload();}
+
+async function initApp(user){
+  currentUser=user;
+  const {data:profile}=await db.from('profiles').select('*').eq('id',user.id).single();
+  if(!profile){
+    const {data:np}=await db.from('profiles').insert({id:user.id,name:user.email,role:'staff',is_active:true}).select().single();
+    if(!np){document.getElementById('login-error').textContent='プロフィールの取得に失敗しました';return;}
+    currentProfile=np;
+  } else {
+    if(profile.is_active===false){await db.auth.signOut();document.getElementById('login-error').textContent='このアカウントは無効です';return;}
+    currentProfile=profile;
+  }
+  document.getElementById('login-screen').style.display='none';
+  document.getElementById('app-screen').classList.add('visible');
+  document.getElementById('user-name').textContent=currentProfile.name;
+  document.getElementById('user-role-label').textContent=currentProfile.role==='admin'?'管理者':'一般従業員';
+  document.getElementById('user-avatar').textContent=currentProfile.name.charAt(0);
+  if(currentProfile.role==='admin'){
+    document.getElementById('admin-nav').style.display='block';
+    document.getElementById('notice-post-form').style.display='block';
+    document.getElementById('admin-clock-area').style.display='block';
+    document.getElementById('staff-clock-notice').style.display='none';
+    // 管理者専用ボタンを全て表示
+    document.querySelectorAll('.admin-only').forEach(el=>el.style.display='block');
+  } else {
+    document.getElementById('admin-clock-area').style.display='none';
+    document.getElementById('staff-clock-notice').style.display='block';
+    document.getElementById('staff-post-form').style.display='block';
+  }
+  startClock();
+  loadNotices();
+  loadTodayAttendance();
+  await loadMenuSettings();
+  await loadDynamicNav();
+  renderBottomNav();
+}
+
+// ===== TAB =====
+function switchTab(tab,el){
+  document.querySelectorAll('.tab-content').forEach(t=>t.style.display='none');
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('tab-'+tab).style.display='block';
+  if(el)el.classList.add('active');
+  currentTab=tab;
+  const menuItem=menuSettings.find(m=>m.key===tab);
+  const titles={notice:'お知らせ',attendance:'勤怠打刻',rules:'就業規則・ルール',manual:'マニュアル',contact:'連絡先',realtime:'本日の出勤状況','manage-attendance':'勤怠管理・PDF','manage-qr':'QRコード管理','manage-category':'カテゴリ管理','manage-content':'コンテンツ管理','manage-account':'アカウント管理'};
+  document.getElementById('topbar-title').textContent=menuItem?`${menuItem.icon} ${menuItem.label}`:(titles[tab]||tab);
+  closeSidebar();
+  if(tab==='notice')loadNotices();
+  if(tab==='attendance'){loadTodayAttendance();loadMyAttendance();}
+  if(tab==='rules')loadContents('rules');
+  if(tab==='manual')loadContents('manual');
+  if(tab==='contact')loadContacts();
+  if(tab==='realtime'){loadRealtime();startRealtimeAuto();}else{stopRealtimeAuto();}
+  if(tab==='manage-attendance'){initMonthFilter();loadStaffFilter();loadMonthlySummary();}
+  if(tab==='manage-qr')loadQRCodes();
+  if(tab==='manage-category'){loadMenuSettingsList();loadCategoryManage();}
+  if(tab==='manage-content'){loadManageContents();loadManageContacts();}
+  if(tab==='manage-account')loadAccounts();
+}
+function setBottomNav(el){document.querySelectorAll('.bn-item').forEach(b=>b.classList.remove('active'));el.classList.add('active');}
+function toggleSidebar(){document.getElementById('sidebar').classList.toggle('open');document.getElementById('sidebar-overlay').classList.toggle('show');}
+function closeSidebar(){document.getElementById('sidebar').classList.remove('open');document.getElementById('sidebar-overlay').classList.remove('show');}
+
+// ===== CLOCK =====
+function startClock(){
+  function tick(){
+    const now=new Date();
+    document.getElementById('clock-time').textContent=now.toLocaleTimeString('ja-JP');
+    const days=['日','月','火','水','木','金','土'];
+    document.getElementById('clock-date').textContent=`${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日（${days[now.getDay()]}）`;
+  }
+  tick();setInterval(tick,1000);
+}
+
+async function loadTodayAttendance(){
+  const today=new Date().toISOString().slice(0,10);
+  const {data:attData}=await db.from('attendance').select('*').eq('user_id',currentUser.id).gte('clock_in',today+'T00:00:00').order('clock_in',{ascending:false}).limit(1);
+  todayRecord=attData&&attData.length>0?attData[0]:null;
+  if(todayRecord){
+    const {data:brData}=await db.from('breaks').select('*').eq('attendance_id',todayRecord.id).is('break_end',null).limit(1);
+    activeBreak=brData&&brData.length>0?brData[0]:null;
+  } else activeBreak=null;
+  updateClockUI();
+}
+
+function updateClockUI(){
+  const status=document.getElementById('clock-status');
+  const breakStatus=document.getElementById('break-status');
+  const btnIn=document.getElementById('btn-clockin');
+  const btnOut=document.getElementById('btn-clockout');
+  const btnBS=document.getElementById('btn-breakstart');
+  const btnBE=document.getElementById('btn-breakend');
+  [btnIn,btnOut,btnBS,btnBE].forEach(b=>b.style.display='none');
+  breakStatus.style.display='none';
+  if(!todayRecord){
+    status.className='clock-status status-out';status.textContent='未出勤';btnIn.style.display='block';
+  } else if(todayRecord.clock_out){
+    status.className='clock-status status-in';
+    status.textContent=`退勤済 (${fmtTime(new Date(todayRecord.clock_in))}〜${fmtTime(new Date(todayRecord.clock_out))})`;
+  } else if(activeBreak){
+    status.className='clock-status status-in';status.textContent=`出勤中 (${fmtTime(new Date(todayRecord.clock_in))}〜)`;
+    breakStatus.style.display='inline-block';btnBE.style.display='block';
+  } else {
+    status.className='clock-status status-in';status.textContent=`出勤中 (${fmtTime(new Date(todayRecord.clock_in))}〜)`;
+    btnOut.style.display='block';btnBS.style.display='block';
+  }
+}
+
+async function clockIn(){
+  const {data,error}=await db.from('attendance').insert({user_id:currentUser.id,user_name:currentProfile.name,clock_in:new Date().toISOString()}).select().single();
+  if(error){showToast('出勤打刻に失敗しました');return;}
+  todayRecord=data;activeBreak=null;updateClockUI();showToast('出勤しました！');loadMyAttendance();
+}
+async function clockOut(){
+  if(!todayRecord)return;
+  if(activeBreak)await breakEnd();
+  const {data,error}=await db.from('attendance').update({clock_out:new Date().toISOString()}).eq('id',todayRecord.id).select().single();
+  if(error){showToast('退勤打刻に失敗しました');return;}
+  todayRecord=data;updateClockUI();showToast('お疲れ様でした！');loadMyAttendance();
+}
+async function breakStart(){
+  if(!todayRecord)return;
+  const {data,error}=await db.from('breaks').insert({attendance_id:todayRecord.id,user_id:currentUser.id,break_start:new Date().toISOString()}).select().single();
+  if(error){showToast('休憩開始に失敗しました');return;}
+  activeBreak=data;updateClockUI();showToast('休憩を開始しました');
+}
+async function breakEnd(){
+  if(!activeBreak)return;
+  const {data,error}=await db.from('breaks').update({break_end:new Date().toISOString()}).eq('id',activeBreak.id).select().single();
+  if(error){showToast('休憩終了に失敗しました');return;}
+  activeBreak=null;updateClockUI();showToast('休憩を終了しました');loadMyAttendance();
+}
+
+// ===== MY ATTENDANCE =====
+async function loadMyAttendance(){
+  const el=document.getElementById('my-attendance-list');
+  const now=new Date();
+  const from=new Date(now.getFullYear(),now.getMonth(),1).toISOString();
+  const {data}=await db.from('attendance').select('*').eq('user_id',currentUser.id).gte('clock_in',from).order('clock_in',{ascending:false});
+  if(!data||data.length===0){el.innerHTML='<div class="empty">今月の勤怠記録はまだありません</div>';return;}
+  const ids=data.map(r=>r.id);
+  const {data:allBreaks}=await db.from('breaks').select('*').in('attendance_id',ids);
+  const {data:editLogs}=await db.from('attendance_edits').select('attendance_id').in('attendance_id',ids);
+  const editedIds=new Set((editLogs||[]).map(e=>e.attendance_id));
+  el.innerHTML=data.map(r=>renderAttRow(r,allBreaks||[],editedIds,false)).join('');
+}
+
+function renderAttRow(r,breaks,editedIds,isAdmin){
+  const i=new Date(r.clock_in);
+  const o=r.clock_out?new Date(r.clock_out):null;
+  const rowBreaks=breaks.filter(b=>b.attendance_id===r.id&&b.break_end);
+  const activeBreakRow=breaks.find(b=>b.attendance_id===r.id&&!b.break_end);
+  const breakMin=rowBreaks.reduce((s,b)=>s+Math.floor((new Date(b.break_end)-new Date(b.break_start))/60000),0);
+  const boundMin=o?Math.floor((o-i)/60000):null;
+  const workMin=boundMin!==null?boundMin-breakMin:null;
+  const now=new Date();
+  const hoursAgo=(now-i)/3600000;
+  const isAdminUser=currentProfile&&currentProfile.role==='admin';
+  const canEdit=isAdminUser||hoursAgo<=EDIT_LIMIT_HOURS;
+  const isEdited=editedIds&&editedIds.has(r.id);
+  const days=['日','月','火','水','木','金','土'];
+  const dateStr=`${i.getMonth()+1}/${i.getDate()}（${days[i.getDay()]}）`;
+  const breakChips=rowBreaks.map(b=>{
+    const bs=new Date(b.break_start),be=new Date(b.break_end);
+    return `<span class="break-chip">休憩 ${fmtTime(bs)}〜${fmtTime(be)} (${fmtMin(Math.floor((be-bs)/60000))})</span>`;
+  }).join('');
+  const activeChip=activeBreakRow?`<span class="break-chip" style="background:var(--orange-light);color:var(--orange);">休憩中 ${fmtTime(new Date(activeBreakRow.break_start))}〜</span>`:'';
+  const breaksJson=encodeURIComponent(JSON.stringify(rowBreaks.map(b=>({id:b.id,start:b.break_start,end:b.break_end}))));
+  return `<div class="att-row">
+    <div class="att-row-header">
+      <div>
+        <span class="att-row-date">${dateStr}</span>
+        ${isEdited?'<span class="att-edited-badge">修正済</span>':''}
+        ${isAdmin?`<span style="font-size:12px;color:var(--text-muted);margin-left:8px;">${esc(r.user_name||'')}</span>`:''}
+      </div>
+      <button class="att-edit-btn" ${canEdit?'':'disabled'} onclick="openEditModal(${r.id},'${i.toISOString()}','${o?o.toISOString():''}','${breaksJson}')" title="${canEdit?'修正':'48時間を超えているため修正不可'}">
+        ${canEdit?'修正':'修正不可'}
+      </button>
+    </div>
+    <div class="att-times">
+      <div class="att-time-item"><span class="att-time-label">出勤</span><span class="att-time-val">${fmtTime(i)}</span></div>
+      <div class="att-time-item"><span class="att-time-label">退勤</span><span class="att-time-val">${o?fmtTime(o):'勤務中'}</span></div>
+    </div>
+    ${breakChips||activeChip?`<div class="break-chips">${breakChips}${activeChip}</div>`:''}
+    <div class="att-summary">
+      <div class="att-summary-item"><span class="att-summary-label">拘束時間: </span><span class="att-summary-val">${boundMin!==null?fmtMin(boundMin):'--'}</span></div>
+      <div class="att-summary-item"><span class="att-summary-label">労働時間: </span><span class="att-summary-val">${workMin!==null?fmtMin(workMin):'--'}</span></div>
+      ${breakMin>0?`<div class="att-summary-item"><span class="att-summary-label">休憩: </span><span style="font-weight:600;color:var(--yellow);">${fmtMin(breakMin)}</span></div>`:''}
+    </div>
+  </div>`;
+}
+
+// ===== EDIT MODAL =====
+function openEditModal(id,clockIn,clockOut,breaksJson){
+  editBreaks=JSON.parse(decodeURIComponent(breaksJson));
+  document.getElementById('edit-att-id').value=id;
+  document.getElementById('edit-clockin').value=toLocalInput(clockIn);
+  document.getElementById('edit-clockout').value=clockOut?toLocalInput(clockOut):'';
+  document.getElementById('edit-reason').value='';
+  const hoursAgo=(new Date()-new Date(clockIn))/3600000;
+  const isAdmin=currentProfile.role==='admin';
+  const remaining=Math.max(0,EDIT_LIMIT_HOURS-hoursAgo);
+  document.getElementById('edit-notice').textContent=isAdmin
+    ?'管理者は制限なしで修正できます。修正理由を必ず入力してください。'
+    :`修正可能時間：残り約${Math.floor(remaining)}時間 (48時間以内は何度でも修正可)`;
+  renderEditBreaks();
+  openModal('edit-modal');
+}
+
+function renderEditBreaks(){
+  const el=document.getElementById('edit-breaks-list');
+  el.innerHTML=editBreaks.map((b,idx)=>`
+    <div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;">
+      <input type="datetime-local" value="${toLocalInput(b.start)}" onchange="editBreaks[${idx}].start=new Date(this.value).toISOString()" style="flex:1;padding:7px 9px;border:1px solid var(--border);border-radius:var(--radius);font-size:12px;background:var(--bg);">
+      <span style="font-size:12px;color:var(--text-muted);">〜</span>
+      <input type="datetime-local" value="${b.end?toLocalInput(b.end):''}" onchange="editBreaks[${idx}].end=this.value?new Date(this.value).toISOString():null" style="flex:1;padding:7px 9px;border:1px solid var(--border);border-radius:var(--radius);font-size:12px;background:var(--bg);">
+      <button onclick="removeBreakRow(${idx})" style="background:var(--danger-light);color:var(--danger);border:none;border-radius:var(--radius);padding:6px 10px;cursor:pointer;font-size:12px;">✕</button>
+    </div>
+  `).join('');
+}
+
+function addBreakRow(){
+  editBreaks.push({id:null,start:new Date().toISOString(),end:null});
+  renderEditBreaks();
+}
+function removeBreakRow(idx){editBreaks.splice(idx,1);renderEditBreaks();}
+
+async function saveAttendanceEdit(){
+  const id=parseInt(document.getElementById('edit-att-id').value);
+  const clockIn=document.getElementById('edit-clockin').value;
+  const clockOut=document.getElementById('edit-clockout').value;
+  const reason=document.getElementById('edit-reason').value.trim();
+  if(!reason){showToast('修正理由を入力してください');return;}
+  if(!clockIn){showToast('出勤時刻を入力してください');return;}
+  const {data:orig}=await db.from('attendance').select('clock_in,clock_out').eq('id',id).single();
+  const updates={clock_in:new Date(clockIn).toISOString()};
+  if(clockOut)updates.clock_out=new Date(clockOut).toISOString();
+  else updates.clock_out=null;
+  const {error}=await db.from('attendance').update(updates).eq('id',id);
+  if(error){showToast('修正に失敗しました');return;}
+  // 休憩の更新：既存削除→再作成
+  await db.from('breaks').delete().eq('attendance_id',id);
+  for(const b of editBreaks){
+    if(b.start){
+      await db.from('breaks').insert({attendance_id:id,user_id:currentUser.id,break_start:b.start,break_end:b.end||null});
+    }
+  }
+  await db.from('attendance_edits').insert({attendance_id:id,edited_by:currentUser.id,field_name:'修正',old_value:JSON.stringify(orig),new_value:JSON.stringify(updates),reason});
+  closeModal('edit-modal');showToast('修正しました');
+  if(currentTab==='attendance'){loadTodayAttendance();loadMyAttendance();}
+  if(currentTab==='manage-attendance')loadMonthlySummary();
+  if(currentTab==='realtime')loadRealtime();
+}
+
+// ===== REALTIME BOARD =====
+function startRealtimeAuto(){stopRealtimeAuto();realtimeTimer=setInterval(loadRealtime,30000);}
+function stopRealtimeAuto(){if(realtimeTimer){clearInterval(realtimeTimer);realtimeTimer=null;}}
+
+async function loadRealtime(){
+  const today=new Date().toISOString().slice(0,10);
+  const {data:profiles}=await db.from('profiles').select('*').eq('is_active',true).order('name');
+  const {data:atts}=await db.from('attendance').select('*').gte('clock_in',today+'T00:00:00');
+  const {data:breaks}=await db.from('breaks').select('*');
+  const now=new Date();
+  document.getElementById('realtime-updated').textContent=`最終更新: ${fmtTime(now)} (30秒ごとに自動更新)`;
+  let cntWork=0,cntBreak=0,cntOff=0,cntDone=0;
+  const cards=(profiles||[]).map(p=>{
+    const att=(atts||[]).find(a=>a.user_id===p.id);
+    const pBreaks=(breaks||[]).filter(b=>att&&b.attendance_id===att.id);
+    const activeB=pBreaks.find(b=>!b.break_end);
+    const doneBreaks=pBreaks.filter(b=>b.break_end);
+    const breakMin=doneBreaks.reduce((s,b)=>s+Math.floor((new Date(b.break_end)-new Date(b.break_start))/60000),0);
+    let statusClass='status-off',statusLabel='未出勤',statusCard='sc-off',cardClass='status-off';
+    let timeInfo='';
+    if(!att){cntOff++;
+    } else if(att.clock_out){
+      cntDone++;statusClass='status-in';statusLabel='退勤済';statusCard='sc-done';cardClass='status-done';
+      const i=new Date(att.clock_in),o=new Date(att.clock_out);
+      const bound=Math.floor((o-i)/60000);const work=bound-breakMin;
+      timeInfo=`<div class="staff-card-times">
+        <div class="staff-card-time-row"><span class="staff-card-time-label">出勤</span><span>${fmtTime(i)}</span></div>
+        <div class="staff-card-time-row"><span class="staff-card-time-label">退勤</span><span>${fmtTime(o)}</span></div>
+        ${breakMin>0?`<div class="staff-card-time-row"><span class="staff-card-time-label">休憩</span><span>${fmtMin(breakMin)}</span></div>`:''}
+      </div>
+      <div class="staff-card-duration">拘束 ${fmtMin(bound)} / 労働 ${fmtMin(work)}</div>`;
+    } else if(activeB){
+      cntBreak++;statusLabel='休憩中';statusCard='sc-break';cardClass='status-break';
+      const elapsed=Math.floor((now-new Date(att.clock_in))/60000);
+      const bElapsed=Math.floor((now-new Date(activeB.break_start))/60000);
+      timeInfo=`<div class="staff-card-times">
+        <div class="staff-card-time-row"><span class="staff-card-time-label">出勤</span><span>${fmtTime(new Date(att.clock_in))}</span></div>
+        <div class="staff-card-time-row"><span class="staff-card-time-label">休憩開始</span><span>${fmtTime(new Date(activeB.break_start))}</span></div>
+      </div>
+      <div class="staff-card-duration">拘束 ${fmtMin(elapsed)} (休憩中 ${fmtMin(bElapsed)})</div>`;
+    } else {
+      cntWork++;statusLabel='出勤中';statusCard='sc-working';cardClass='status-working';
+      const elapsed=Math.floor((now-new Date(att.clock_in))/60000);
+      const work=elapsed-breakMin;
+      timeInfo=`<div class="staff-card-times">
+        <div class="staff-card-time-row"><span class="staff-card-time-label">出勤</span><span>${fmtTime(new Date(att.clock_in))}</span></div>
+        ${breakMin>0?`<div class="staff-card-time-row"><span class="staff-card-time-label">休憩計</span><span>${fmtMin(breakMin)}</span></div>`:''}
+      </div>
+      <div class="staff-card-duration">拘束 ${fmtMin(elapsed)} / 労働 ${fmtMin(work)}</div>`;
+    }
+    return `<div class="staff-card ${cardClass}">
+      <div class="staff-card-header">
+        <div class="staff-card-avatar">${p.name.charAt(0)}</div>
+        <div>
+          <div class="staff-card-name">${esc(p.name)}</div>
+          <span class="staff-card-status ${statusCard}">${statusLabel}</span>
+        </div>
+      </div>
+      ${timeInfo}
+    </div>`;
+  }).join('');
+  document.getElementById('realtime-grid').innerHTML=cards||'<div class="empty">スタッフなし</div>';
+  document.getElementById('realtime-summary').innerHTML=`
+    <span class="badge badge-active">出勤中 ${cntWork}名</span>
+    <span class="badge" style="background:var(--yellow-light);color:var(--yellow);">休憩中 ${cntBreak}名</span>
+    <span class="badge badge-info">退勤済 ${cntDone}名</span>
+    <span class="badge" style="background:var(--bg);color:var(--text-muted);">未出勤 ${cntOff}名</span>
+  `;
+}
+
+// ===== MONTHLY SUMMARY =====
+function initMonthFilter(){
+  const sel=document.getElementById('att-filter-month');
+  if(sel.options.length>0)return;
+  const now=new Date();
+  for(let i=0;i<12;i++){
+    const d=new Date(now.getFullYear(),now.getMonth()-i,1);
+    const val=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+    sel.innerHTML+=`<option value="${val}">${d.getFullYear()}年${d.getMonth()+1}月</option>`;
+  }
+}
+
+async function loadStaffFilter(){
+  const sel=document.getElementById('att-filter-staff');
+  if(sel.options.length>1)return;
+  const {data}=await db.from('profiles').select('id,name').eq('is_active',true).order('name');
+  (data||[]).forEach(p=>sel.innerHTML+=`<option value="${p.id}">${esc(p.name)}</option>`);
+}
+
+async function loadMonthlySummary(){
+  const el=document.getElementById('monthly-summary');
+  el.innerHTML='<div class="loading">読み込み中...</div>';
+  const month=document.getElementById('att-filter-month').value;
+  const staffId=document.getElementById('att-filter-staff').value;
+  if(!month)return;
+  const [y,m]=month.split('-');
+  const from=`${y}-${m}-01T00:00:00`;
+  const toDate=new Date(parseInt(y),parseInt(m),1).toISOString();
+  let query=db.from('attendance').select('*').gte('clock_in',from).lt('clock_in',toDate).order('clock_in');
+  if(staffId)query=query.eq('user_id',staffId);
+  const {data:atts}=await query;
+  if(!atts||atts.length===0){el.innerHTML='<div class="empty">この期間の記録はありません</div>';return;}
+  const ids=atts.map(r=>r.id);
+  const {data:allBreaks}=await db.from('breaks').select('*').in('attendance_id',ids);
+  const {data:editLogs}=await db.from('attendance_edits').select('attendance_id').in('attendance_id',ids);
+  const editedIds=new Set((editLogs||[]).map(e=>e.attendance_id));
+  // 日別集計
+  const days=['日','月','火','水','木','金','土'];
+  const rows=atts.map(r=>{
+    const i=new Date(r.clock_in);
+    const o=r.clock_out?new Date(r.clock_out):null;
+    const rowBreaks=(allBreaks||[]).filter(b=>b.attendance_id===r.id&&b.break_end);
+    const breakMin=rowBreaks.reduce((s,b)=>s+Math.floor((new Date(b.break_end)-new Date(b.break_start))/60000),0);
+    const boundMin=o?Math.floor((o-i)/60000):null;
+    const workMin=boundMin!==null?boundMin-breakMin:null;
+    const isEdited=editedIds.has(r.id);
+    const breaksJson=encodeURIComponent(JSON.stringify(rowBreaks.map(b=>({id:b.id,start:b.break_start,end:b.break_end}))));
+    return {r,i,o,breakMin,boundMin,workMin,isEdited,breaksJson};
+  });
+  const totalBound=rows.reduce((s,r)=>s+(r.boundMin||0),0);
+  const totalWork=rows.reduce((s,r)=>s+(r.workMin||0),0);
+  const totalBreak=rows.reduce((s,r)=>s+r.breakMin,0);
+  const html=`<div class="summary-table-wrap">
+    <table class="summary-table" id="summary-table">
+      <thead><tr>
+        <th>日付</th><th>スタッフ</th><th>出勤</th><th>退勤</th><th>休憩</th><th>拘束時間</th><th>労働時間</th><th>修正</th>
+      </tr></thead>
+      <tbody>
+        ${rows.map(({r,i,o,breakMin,boundMin,workMin,isEdited,breaksJson})=>`<tr>
+          <td>${i.getMonth()+1}/${i.getDate()}（${days[i.getDay()]}）</td>
+          <td>${esc(r.user_name||'')}</td>
+          <td>${fmtTime(i)}</td>
+          <td>${o?fmtTime(o):'勤務中'}</td>
+          <td>${breakMin>0?fmtMin(breakMin):'—'}</td>
+          <td>${boundMin!==null?fmtMin(boundMin):'—'}</td>
+          <td>${workMin!==null?fmtMin(workMin):'—'}</td>
+          <td>${isEdited?'<span style="font-size:10px;background:var(--yellow-light);color:var(--yellow);padding:1px 5px;border-radius:3px;">修正済</span> ':''}<button class="att-edit-btn no-print" onclick="openEditModal(${r.id},'${i.toISOString()}','${o?o.toISOString():''}','${breaksJson}')">修正</button></td>
+        </tr>`).join('')}
+        <tr class="total-row">
+          <td colspan="4">合計</td>
+          <td>${fmtMin(totalBreak)}</td>
+          <td>${fmtMin(totalBound)}</td>
+          <td>${fmtMin(totalWork)}</td>
+          <td></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <div style="padding:12px 16px;">
+    <button class="btn btn-orange no-print" onclick="printSummary()" style="width:100%;">🖨️ PDF・印刷</button>
+  </div>`;
+  el.innerHTML=html;
+}
+
+function printSummary(){
+  const month=document.getElementById('att-filter-month').value;
+  const staffSel=document.getElementById('att-filter-staff');
+  const staffName=staffSel.options[staffSel.selectedIndex].text;
+  const table=document.getElementById('summary-table');
+  if(!table){showToast('データを読み込んでから印刷してください');return;}
+  const printEl=document.getElementById('print-area');
+  printEl.innerHTML=`
+    <div style="font-family:'Hiragino Kaku Gothic ProN','Hiragino Sans','Yu Gothic UI',Meiryo,sans-serif;padding:10mm;">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;border-bottom:2px solid #F26A1B;padding-bottom:12px;">
+        <div style="width:36px;height:36px;background:#F26A1B;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:16px;font-weight:700;">RH</div>
+        <div>
+          <div style="font-size:16px;font-weight:700;">株式会社ランナーズハイ 勤怠集計表</div>
+          <div style="font-size:12px;color:#888;">${month.replace('-','年')}月 ${staffName} / 出力日: ${new Date().toLocaleDateString('ja-JP')}</div>
+        </div>
+      </div>
+      ${table.outerHTML}
+    </div>`;
+  window.print();
+}
+
+// ===== NOTICES =====
+async function loadNotices(){
+  const el=document.getElementById('notice-list');
+  const isAdmin=currentProfile&&currentProfile.role==='admin';
+  const {data}=await db.from('notices').select('*').order('created_at',{ascending:false});
+  if(!data||data.length===0){el.innerHTML='<div class="empty">お知らせはまだありません</div>';return;}
+  const ids=data.map(n=>n.id);
+  data.forEach(n=>noticeCache[n.id]=n);
+  const {data:likes}=await db.from('notice_likes').select('*').in('notice_id',ids);
+  el.innerHTML=data.map(n=>{
+    const noticeLikes=(likes||[]).filter(l=>l.notice_id===n.id);
+    const myLike=noticeLikes.find(l=>l.user_id===currentUser.id);
+    const likeNames=noticeLikes.map(l=>esc(l.user_name||'')).join('・');
+    const canEdit=isAdmin||(n.posted_by===currentUser.id);
+    return `<div class="notice-item" id="notice-${n.id}">
+      <div class="notice-header">
+        <span class="badge ${n.badge==='info'?'badge-info':'badge-staff'}">${n.badge==='info'?'お知らせ':'従業員投稿'}</span>
+        <span class="notice-title">${esc(n.title)}</span>
+        ${canEdit?`<div style="margin-left:auto;display:flex;gap:4px;">
+          <button onclick="openNoticeEdit(${n.id})" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:12px;">✏️</button>
+          <button onclick="deleteNotice(${n.id})" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:12px;">🗑️</button>
+        </div>`:''}
+      </div>
+      <div class="notice-body">${esc(n.body)}</div>
+      ${n.image_url?`<img src="${n.image_url}" style="max-width:100%;border-radius:8px;margin-top:8px;cursor:pointer;" onclick="window.open('${n.image_url}','_blank')">`:''}
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px;">
+        <div class="notice-meta">${esc(n.poster_name||'')} · ${formatDate(n.created_at)}</div>
+        <div style="display:flex;align-items:center;gap:6px;">
+          ${noticeLikes.length>0?`<span style="font-size:11px;color:var(--text-muted);">${likeNames.length>15?likeNames.slice(0,15)+'...':likeNames}</span>`:''}
+          <button onclick="toggleLike(${n.id})" style="background:${myLike?'var(--yellow-light)':'var(--bg)'};border:1px solid ${myLike?'var(--yellow)':'var(--border)'};border-radius:20px;padding:3px 10px;cursor:pointer;font-size:13px;">
+            👍 ${noticeLikes.length}
+          </button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+let noticeImageFile=null;
+let staffNoticeImageFile=null;
+
+function onNoticeDragOver(e){e.preventDefault();document.getElementById('notice-upload-area').classList.add('drag');}
+function onNoticeDrop(e){e.preventDefault();document.getElementById('notice-upload-area').classList.remove('drag');const f=e.dataTransfer.files[0];if(f&&f.type.startsWith('image/'))setNoticeImage(f);}
+function onNoticeImageSelect(e){const f=e.target.files[0];if(f)setNoticeImage(f);}
+function setNoticeImage(f){
+  noticeImageFile=f;
+  document.getElementById('notice-upload-label').textContent=f.name;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    document.getElementById('notice-preview-img').src=e.target.result;
+    document.getElementById('notice-image-preview').style.display='block';
+  };
+  reader.readAsDataURL(f);
+}
+function clearNoticeImage(){
+  noticeImageFile=null;
+  document.getElementById('notice-upload-label').textContent='クリックまたはドラッグ&ドロップ';
+  document.getElementById('notice-image-preview').style.display='none';
+  document.getElementById('notice-image-file').value='';
+}
+
+function onStaffNoticeImageSelect(e){const f=e.target.files[0];if(f)setStaffNoticeImage(f);}
+function setStaffNoticeImage(f){
+  staffNoticeImageFile=f;
+  document.getElementById('staff-notice-upload-label').textContent=f.name;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    document.getElementById('staff-preview-img').src=e.target.result;
+    document.getElementById('staff-notice-image-preview').style.display='block';
+  };
+  reader.readAsDataURL(f);
+}
+function clearStaffNoticeImage(){
+  staffNoticeImageFile=null;
+  document.getElementById('staff-notice-upload-label').textContent='クリックまたはドラッグ&ドロップ';
+  document.getElementById('staff-notice-image-preview').style.display='none';
+  document.getElementById('staff-notice-image-file').value='';
+}
+
+async function uploadNoticeImage(file){
+  const ext=file.name.split('.').pop();
+  const path=`${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+  const {error}=await db.storage.from('notice-images').upload(path,file);
+  if(error)return null;
+  const {data}=db.storage.from('notice-images').getPublicUrl(path);
+  return data.publicUrl;
+}
+
+async function toggleLike(noticeId){
+  const {data:existing}=await db.from('notice_likes').select('id').eq('notice_id',noticeId).eq('user_id',currentUser.id).maybeSingle();
+  if(existing){
+    await db.from('notice_likes').delete().eq('notice_id',noticeId).eq('user_id',currentUser.id);
+  } else {
+    await db.from('notice_likes').insert({notice_id:noticeId,user_id:currentUser.id,user_name:currentProfile.name});
+  }
+  loadNotices();
+}
+
+async function deleteNotice(id){
+  if(!confirm('このお知らせを削除しますか？'))return;
+  const {error}=await db.from('notices').delete().eq('id',id);
+  if(error){showToast('削除に失敗しました');return;}
+  showToast('削除しました');
+  loadNotices();
+}
+
+// noticeデータをキャッシュ
+let noticeCache={};
+function openNoticeEdit(id){
+  const n=noticeCache[id];
+  if(!n)return;
+  document.getElementById('en-id').value=id;
+  document.getElementById('en-title').value=n.title;
+  document.getElementById('en-body').value=n.body;
+  document.getElementById('en-error').textContent='';
+  openModal('edit-notice-modal');
+}
+
+async function saveNoticeEdit(){
+  const id=document.getElementById('en-id').value;
+  const title=document.getElementById('en-title').value.trim();
+  const body=document.getElementById('en-body').value.trim();
+  const err=document.getElementById('en-error');
+  if(!title||!body){err.textContent='タイトルと内容を入力してください';return;}
+  const {error}=await db.from('notices').update({title,body}).eq('id',id);
+  if(error){err.textContent='保存に失敗しました';return;}
+  closeModal('edit-notice-modal');
+  showToast('更新しました');
+  loadNotices();
+}
+
+async function postStaffNotice(){
+  const title=document.getElementById('staff-notice-title').value.trim();
+  const body=document.getElementById('staff-notice-body').value.trim();
+  if(!title||!body){showToast('タイトルと内容を入力してください');return;}
+  let image_url=null;
+  if(staffNoticeImageFile){image_url=await uploadNoticeImage(staffNoticeImageFile);}
+  const {error}=await db.from('notices').insert({title,body,badge:'staff',posted_by:currentUser.id,poster_name:currentProfile.name,image_url});
+  if(error){showToast('投稿に失敗しました');return;}
+  document.getElementById('staff-notice-title').value='';
+  document.getElementById('staff-notice-body').value='';
+  clearStaffNoticeImage();
+  showToast('投稿しました');loadNotices();
+}
+
+async function postNotice(){
+  const title=document.getElementById('notice-title-input').value.trim();
+  const body=document.getElementById('notice-body-input').value.trim();
+  const badge=document.getElementById('notice-badge-select').value;
+  if(!title||!body){showToast('タイトルと内容を入力してください');return;}
+  let image_url=null;
+  if(noticeImageFile){image_url=await uploadNoticeImage(noticeImageFile);}
+  const {error}=await db.from('notices').insert({title,body,badge,posted_by:currentUser.id,poster_name:currentProfile.name,image_url});
+  if(error){showToast('投稿に失敗しました');return;}
+  document.getElementById('notice-title-input').value='';
+  document.getElementById('notice-body-input').value='';
+  clearNoticeImage();
+  showToast('投稿しました');loadNotices();
+}
+
+// ===== CONTENTS =====
+async function loadContents(type){
+  const listId=type==='rules'?'rules-list':'manual-list';
+  const el=document.getElementById(listId);
+  const isAdmin=currentProfile&&currentProfile.role==='admin';
+  const typeCats=allCategories.filter(c=>c.type===type&&c.is_visible).map(c=>c.id);
+  if(typeCats.length===0){el.innerHTML='<div class="empty">カテゴリが設定されていません</div>';return;}
+  const {data}=await db.from('contents').select('*').in('category_id',typeCats).order('created_at',{ascending:false});
+  if(!data||data.length===0){
+    el.innerHTML=`<div class="empty">コンテンツはまだありません${isAdmin?'<br><small>右上の「+ 追加」ボタンから追加できます</small>':''}</div>`;
+    return;
+  }
+  el.innerHTML=data.map(c=>{
+    const cat=allCategories.find(a=>a.id===c.category_id);
+    const icon=cat?cat.icon:(type==='rules'?'📋':'📖');
+    return `<div class="doc-item">
+      <div class="doc-icon ${type==='rules'?'orange':'blue'}" onclick="showDetail('${esc(c.title)}','${encodeURIComponent(c.body||'')}','${encodeURIComponent(c.file_url||'')}')" style="cursor:pointer;">${icon}</div>
+      <div class="doc-info" onclick="showDetail('${esc(c.title)}','${encodeURIComponent(c.body||'')}','${encodeURIComponent(c.file_url||'')}')" style="cursor:pointer;">
+        <div class="doc-name">${esc(c.title)}</div>
+        <div class="doc-meta">${cat?esc(cat.name):''} · ${formatDate(c.updated_at)}</div>
+      </div>
+      ${isAdmin?`<div style="display:flex;gap:6px;flex-shrink:0;">
+        <button class="btn btn-ghost" onclick="openContentEditModal(${c.id},'${encodeURIComponent(c.title)}','${encodeURIComponent(c.body||'')}','${encodeURIComponent(c.file_url||'')}',${c.category_id})">編集</button>
+        <button class="btn btn-danger" onclick="deleteContent(${c.id});loadContents('${type}')">削除</button>
+      </div>`:'<span style="color:var(--text-muted);">›</span>'}
+    </div>`;
+  }).join('');
+}
+function linkify(text){
+  const urlRegex=/(https?:\/\/[^\s\u3000-\u9fff\uff00-\uffef]+)/g;
+  return esc(text).replace(urlRegex, url=>`<a href="${url}" target="_blank" rel="noopener" style="color:var(--orange);word-break:break-all;">${url}</a>`);
+}
+
+function showDetail(title,bodyEnc,urlEnc){
+  document.getElementById('detail-title').textContent=title;
+  const body=decodeURIComponent(bodyEnc);
+  document.getElementById('detail-body').innerHTML=linkify(body).replace(/\n/g,'<br>');
+  const url=decodeURIComponent(urlEnc);
+  document.getElementById('detail-link').innerHTML=url?`<a href="${url}" target="_blank" rel="noopener" style="color:var(--orange);font-size:13px;">📎 ファイルを開く</a>`:'';
+  openModal('detail-modal');
+}
+
+// ===== CONTACTS =====
+async function loadContacts(){
+  const el=document.getElementById('contact-list');
+  const isAdmin=currentProfile&&currentProfile.role==='admin';
+  const {data}=await db.from('contacts').select('*').order('sort_order');
+  if(!data||data.length===0){el.innerHTML='<div class="empty">連絡先はまだありません</div>';return;}
+  const colors=['var(--orange)','#185FA5','#0F6E56','#993556','#6B4C99'];
+  el.innerHTML='<div style="padding:4px 16px;">'+data.map((c,i)=>`<div class="contact-item">
+    <div class="contact-avatar" style="background:${colors[i%colors.length]};">${c.name.charAt(0)}</div>
+    <div class="contact-info"><div class="contact-name">${esc(c.name)}${c.store?`<span style="font-size:11px;color:var(--text-muted);margin-left:6px;">${esc(c.store)}</span>`:''}</div><div class="contact-role">${esc(c.role||'')}</div></div>
+    ${c.phone?`<a href="tel:${esc(c.phone)}" style="font-size:12px;color:var(--blue);font-weight:500;">${esc(c.phone)}</a>`:''}
+    ${isAdmin?`<div style="display:flex;gap:6px;margin-left:8px;">
+      <button class="btn btn-ghost" onclick="openEditContactModal(${c.id},'${encodeURIComponent(c.name)}','${encodeURIComponent(c.role||'')}','${encodeURIComponent(c.store||'')}','${encodeURIComponent(c.phone||'')}','${encodeURIComponent(c.email||'')}')">編集</button>
+      <button class="btn btn-danger" onclick="deleteContact(${c.id})">削除</button>
+    </div>`:''}
+  </div>`).join('')+'</div>';
+}
+
+// ===== FILE UPLOAD =====
+function onDragOver(e){e.preventDefault();document.getElementById('upload-area').classList.add('drag');}
+function onDrop(e){e.preventDefault();document.getElementById('upload-area').classList.remove('drag');const f=e.dataTransfer.files[0];if(f)setFile(f);}
+function onFileSelect(e){const f=e.target.files[0];if(f)setFile(f);}
+function setFile(f){selectedFile=f;document.getElementById('upload-label').textContent=f.name;}
+async function uploadFile(){
+  if(!selectedFile)return null;
+  const ext=selectedFile.name.split('.').pop();
+  const path=`${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+  document.getElementById('progress-bar').style.display='block';
+  document.getElementById('progress-fill').style.width='40%';
+  const {error}=await db.storage.from('documents').upload(path,selectedFile);
+  document.getElementById('progress-fill').style.width='100%';
+  if(error){showToast('ファイルアップロードに失敗しました');return null;}
+  const {data:signed}=await db.storage.from('documents').createSignedUrl(path,60*60*24*365*10);
+  return signed?signed.signedUrl:null;
+}
+
+// ===== MANAGE CONTENTS =====
+async function loadManageContents(){
+  const el=document.getElementById('content-manage-list');
+  const {data}=await db.from('contents').select('*,categories(name,icon)').order('category_id').order('sort_order').order('created_at',{ascending:false});
+  if(!data||data.length===0){el.innerHTML='<div class="empty">コンテンツなし</div>';return;}
+  el.innerHTML=data.map((c,idx)=>`<div class="doc-item" id="content-row-${c.id}">
+    <div class="doc-icon orange">${c.categories?.icon||'📄'}</div>
+    <div class="doc-info">
+      <div class="doc-name">${esc(c.title)}</div>
+      <div class="doc-meta">${esc(c.categories?.name||'')} · ${formatDate(c.updated_at)}</div>
+    </div>
+    <div style="display:flex;gap:6px;flex-shrink:0;">
+      <button class="btn btn-ghost" onclick="openContentEditModal(${c.id},'${encodeURIComponent(c.title)}','${encodeURIComponent(c.body||'')}','${encodeURIComponent(c.file_url||'')}',${c.category_id})">編集</button>
+      <button class="btn btn-danger" onclick="deleteContent(${c.id})">削除</button>
+    </div>
+  </div>`).join('');
+}
+async function deleteContent(id){if(!confirm('削除しますか？'))return;await db.from('contents').delete().eq('id',id);showToast('削除しました');loadManageContents();}
+function openContentModal(){
+  selectedFile=null;
+  document.getElementById('upload-label').textContent='クリックまたはドラッグ&ドロップ';
+  document.getElementById('progress-bar').style.display='none';
+  const sel=document.getElementById('cm-category-id');
+  if(allCategories.length===0){
+    db.from('categories').select('*').eq('is_visible',true).order('sort_order').then(({data})=>{
+      allCategories=data||[];
+      sel.innerHTML=allCategories.map(c=>`<option value="${c.id}">${c.icon||'📄'} ${esc(c.name)}</option>`).join('');
+    });
+  } else {
+    sel.innerHTML=allCategories.filter(c=>c.is_visible).map(c=>`<option value="${c.id}">${c.icon||'📄'} ${esc(c.name)}</option>`).join('');
+  }
+  openModal('content-modal');
+}
+async function saveContent(){
+  const cat_id=parseInt(document.getElementById('cm-category-id').value);
+  const title=document.getElementById('cm-title').value.trim();
+  const body=document.getElementById('cm-body').value.trim();
+  if(!title){showToast('タイトルを入力してください');return;}
+  if(!cat_id){showToast('カテゴリを選択してください');return;}
+  let file_url='';
+  if(selectedFile){file_url=await uploadFile()||'';}
+  const {error}=await db.from('contents').insert({category_id:cat_id,title,body,file_url,created_by:currentUser.id});
+  if(error){showToast('保存に失敗しました');return;}
+  closeModal('content-modal');
+  ['cm-title','cm-body'].forEach(id=>document.getElementById(id).value='');
+  selectedFile=null;showToast('追加しました');loadManageContents();
+}
+
+function openEditContactModal(id,nameEnc,roleEnc,storeEnc,phoneEnc,emailEnc){
+  document.getElementById('ec-id').value=id;
+  document.getElementById('ec-name').value=decodeURIComponent(nameEnc);
+  document.getElementById('ec-role').value=decodeURIComponent(roleEnc);
+  document.getElementById('ec-store').value=decodeURIComponent(storeEnc);
+  document.getElementById('ec-phone').value=decodeURIComponent(phoneEnc);
+  document.getElementById('ec-email').value=decodeURIComponent(emailEnc);
+  document.getElementById('ec-error').textContent='';
+  openModal('edit-contact-modal');
+}
+
+async function saveContactEdit(){
+  const id=document.getElementById('ec-id').value;
+  const name=document.getElementById('ec-name').value.trim();
+  const role=document.getElementById('ec-role').value.trim();
+  const store=document.getElementById('ec-store').value.trim();
+  const phone=document.getElementById('ec-phone').value.trim();
+  const email=document.getElementById('ec-email').value.trim();
+  const err=document.getElementById('ec-error');
+  if(!name){err.textContent='名前を入力してください';return;}
+  const {error}=await db.from('contacts').update({name,role,store,phone,email}).eq('id',id);
+  if(error){err.textContent='保存に失敗しました';return;}
+  closeModal('edit-contact-modal');
+  showToast('更新しました');
+  loadContacts();
+}
+
+// ===== MANAGE CONTACTS =====
+async function loadManageContacts(){
+  const el=document.getElementById('contact-manage-list');
+  const {data}=await db.from('contacts').select('*').order('sort_order');
+  if(!data||data.length===0){el.innerHTML='<div class="empty">連絡先なし</div>';return;}
+  el.innerHTML=data.map(c=>`<div class="doc-item">
+    <div class="doc-icon orange">📞</div>
+    <div class="doc-info"><div class="doc-name">${esc(c.name)}</div><div class="doc-meta">${esc(c.role||'')}${c.store?' · '+esc(c.store):''}${c.phone?' · '+esc(c.phone):''}</div></div>
+    <button class="btn btn-danger" onclick="deleteContact(${c.id})">削除</button>
+  </div>`).join('');
+}
+async function deleteContact(id){if(!confirm('削除しますか？'))return;await db.from('contacts').delete().eq('id',id);showToast('削除しました');loadManageContacts();}
+function openContactModal(){openModal('contact-modal');}
+async function saveContact(){
+  const name=document.getElementById('ct-name').value.trim();
+  const role=document.getElementById('ct-role').value.trim();
+  const store=document.getElementById('ct-store').value.trim();
+  const phone=document.getElementById('ct-phone').value.trim();
+  const email=document.getElementById('ct-email').value.trim();
+  if(!name){showToast('名前を入力してください');return;}
+  const {error}=await db.from('contacts').insert({name,role,store,phone,email});
+  if(error){showToast('保存に失敗しました');return;}
+  closeModal('contact-modal');
+  ['ct-name','ct-role','ct-store','ct-phone','ct-email'].forEach(id=>document.getElementById(id).value='');
+  showToast('追加しました');loadManageContacts();
+}
+
+function openAddUserModal(){
+  document.getElementById('new-user-name').value='';
+  document.getElementById('new-user-email').value='';
+  document.getElementById('new-user-pass').value='';
+  document.getElementById('add-user-error').textContent='';
+  openModal('add-user-modal');
+}
+
+async function addUser(){
+  const name=document.getElementById('new-user-name').value.trim();
+  const email=document.getElementById('new-user-email').value.trim();
+  const password=document.getElementById('new-user-pass').value;
+  const err=document.getElementById('add-user-error');
+  const btn=document.getElementById('add-user-btn');
+  err.textContent='';
+  if(!name){err.textContent='名前を入力してください';return;}
+  if(!email){err.textContent='メールアドレスを入力してください';return;}
+  if(!password||password.length<8){err.textContent='パスワードは8文字以上で入力してください';return;}
+  btn.disabled=true;btn.textContent='追加中...';
+  const {data:{session}}=await db.auth.getSession();
+  const res=await fetch(`${SUPABASE_URL}/functions/v1/create-user`,{
+    method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':`Bearer ${session.access_token}`},
+    body:JSON.stringify({action:'create',name,email,password})
+  });
+  const result=await res.json();
+  btn.disabled=false;btn.textContent='追加する';
+  if(result.error){err.textContent=result.error;return;}
+  closeModal('add-user-modal');
+  showToast(`${name}さんを追加しました`);
+  loadAccounts();
+}
+
+// ===== ACCOUNTS =====
+async function loadAccounts(){
+  const el=document.getElementById('account-list');
+  const {data}=await db.from('profiles').select('*').order('created_at');
+  if(!data||data.length===0){el.innerHTML='<div class="empty">アカウントなし</div>';return;}
+  el.innerHTML=data.map(p=>`<div class="account-item">
+    <div class="user-avatar" style="width:36px;height:36px;font-size:13px;">${p.name.charAt(0)}</div>
+    <div class="account-info">
+      <div class="account-name">${esc(p.name)}
+        <span class="badge ${p.role==='admin'?'badge-admin':''}" style="margin-left:4px;">${p.role==='admin'?'管理者':'従業員'}</span>
+        <span class="badge ${p.is_active?'badge-active':'badge-inactive'}" style="margin-left:2px;">${p.is_active?'有効':'無効'}</span>
+      </div>
+      <div class="account-email">${p.store||'店舗未設定'}</div>
+    </div>
+    <div class="account-actions">
+      <button class="btn btn-ghost" onclick="openEditAccountModal('${p.id}','${encodeURIComponent(p.name)}','${encodeURIComponent(p.store||'')}')">編集</button>
+      <button class="btn btn-ghost" onclick="openResetPassModal('${p.id}','${encodeURIComponent(p.name)}')">PW変更</button>
+      ${p.id!==currentUser.id?`<button class="btn ${p.is_active?'btn-danger':'btn-ghost'}" onclick="toggleAccount('${p.id}',${p.is_active})">${p.is_active?'無効化':'有効化'}</button>`:'<span style="font-size:11px;color:var(--text-muted);">自分</span>'}
+    </div>
+  </div>`).join('');
+}
+
+function openEditAccountModal(userId,nameEnc,storeEnc){
+  document.getElementById('ea-user-id').value=userId;
+  document.getElementById('ea-name').value=decodeURIComponent(nameEnc);
+  document.getElementById('ea-store').value=decodeURIComponent(storeEnc);
+  document.getElementById('ea-error').textContent='';
+  openModal('edit-account-modal');
+}
+
+async function saveAccountEdit(){
+  const userId=document.getElementById('ea-user-id').value;
+  const name=document.getElementById('ea-name').value.trim();
+  const store=document.getElementById('ea-store').value;
+  const err=document.getElementById('ea-error');
+  err.textContent='';
+  if(!name){err.textContent='名前を入力してください';return;}
+  const {data:{session}}=await db.auth.getSession();
+  const res=await fetch(`${SUPABASE_URL}/functions/v1/create-user`,{
+    method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':`Bearer ${session.access_token}`},
+    body:JSON.stringify({action:'update_profile',userId,name,store})
+  });
+  const result=await res.json();
+  if(result.error){err.textContent=result.error;return;}
+  closeModal('edit-account-modal');
+  showToast('更新しました');
+  loadAccounts();
+}
+
+function openResetPassModal(userId,nameEnc){
+  document.getElementById('rp-user-id').value=userId;
+  document.getElementById('rp-user-name').textContent=`対象：${decodeURIComponent(nameEnc)}`;
+  document.getElementById('rp-password').value='';
+  document.getElementById('rp-error').textContent='';
+  openModal('reset-pass-modal');
+}
+
+async function savePasswordReset(){
+  const userId=document.getElementById('rp-user-id').value;
+  const password=document.getElementById('rp-password').value;
+  const err=document.getElementById('rp-error');
+  const btn=document.getElementById('rp-btn');
+  err.textContent='';
+  if(!password||password.length<8){err.textContent='8文字以上で入力してください';return;}
+  btn.disabled=true;btn.textContent='処理中...';
+  const {data:{session}}=await db.auth.getSession();
+  const res=await fetch(`${SUPABASE_URL}/functions/v1/create-user`,{
+    method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':`Bearer ${session.access_token}`},
+    body:JSON.stringify({action:'reset_password',userId,password})
+  });
+  const result=await res.json();
+  btn.disabled=false;btn.textContent='リセット';
+  if(result.error){err.textContent=result.error;return;}
+  closeModal('reset-pass-modal');
+  showToast('パスワードをリセットしました');
+}
+async function toggleAccount(id,current){
+  if(!confirm(current?'無効化しますか？':'有効化しますか？'))return;
+  await db.from('profiles').update({is_active:!current}).eq('id',id);
+  showToast(current?'無効化しました':'有効化しました');loadAccounts();
+}
+
+// ===== UTILS =====
+function fmtTime(d){return d.toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'});}
+function fmtMin(m){if(m===null||m===undefined)return'--';const h=Math.floor(Math.abs(m)/60),min=Math.abs(m)%60;return h>0?`${h}時間${min}分`:`${min}分`;}
+function toLocalInput(iso){if(!iso)return'';const d=new Date(iso);const pad=n=>String(n).padStart(2,'0');return`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function formatDate(s){if(!s)return'';const d=new Date(s);return`${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日`;}
+function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2800);}
+function openModal(id){document.getElementById(id).classList.add('show');}
+function closeModal(id){document.getElementById(id).classList.remove('show');}
+
+// コンテンツ編集
+let selectedFile2=null;
+function onDragOver2(e){e.preventDefault();document.getElementById('ce-upload-area').classList.add('drag');}
+function onDrop2(e){e.preventDefault();document.getElementById('ce-upload-area').classList.remove('drag');const f=e.dataTransfer.files[0];if(f)setFile2(f);}
+function onFileSelect2(e){const f=e.target.files[0];if(f)setFile2(f);}
+function setFile2(f){selectedFile2=f;document.getElementById('ce-upload-label').textContent=f.name;}
+
+function openContentEditModal(id,titleEnc,bodyEnc,urlEnc,catId){
+  selectedFile2=null;
+  document.getElementById('ce-id').value=id;
+  document.getElementById('ce-title').value=decodeURIComponent(titleEnc);
+  document.getElementById('ce-body').value=decodeURIComponent(bodyEnc);
+  document.getElementById('ce-url').value=decodeURIComponent(urlEnc);
+  document.getElementById('ce-upload-label').textContent='クリックまたはドラッグ&ドロップ';
+  document.getElementById('ce-progress-bar').style.display='none';
+  // カテゴリ選択
+  const sel=document.getElementById('ce-category-id');
+  sel.innerHTML=allCategories.filter(c=>c.is_visible).map(c=>`<option value="${c.id}" ${c.id===catId?'selected':''}>${c.icon||'📄'} ${esc(c.name)}</option>`).join('');
+  openModal('content-edit-modal');
+}
+
+async function saveContentEdit(){
+  const id=document.getElementById('ce-id').value;
+  const title=document.getElementById('ce-title').value.trim();
+  const body=document.getElementById('ce-body').value.trim();
+  let file_url=document.getElementById('ce-url').value.trim();
+  const cat_id=parseInt(document.getElementById('ce-category-id').value);
+  if(!title){showToast('タイトルを入力してください');return;}
+  if(selectedFile2){
+    // 新しいファイルをアップロード
+    const ext=selectedFile2.name.split('.').pop();
+    const path=`${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+    document.getElementById('ce-progress-bar').style.display='block';
+    document.getElementById('ce-progress-fill').style.width='40%';
+    const {error:upErr}=await db.storage.from('documents').upload(path,selectedFile2);
+    document.getElementById('ce-progress-fill').style.width='100%';
+    if(upErr){showToast('ファイルアップロードに失敗しました');return;}
+    const {data:signed}=await db.storage.from('documents').createSignedUrl(path,60*60*24*365*10);
+    if(signed)file_url=signed.signedUrl;
+  }
+  const {error}=await db.from('contents').update({
+    title,body,file_url,category_id:cat_id,updated_at:new Date().toISOString()
+  }).eq('id',id);
+  if(error){showToast('保存に失敗しました');return;}
+  closeModal('content-edit-modal');
+  showToast('更新しました');
+  loadManageContents();
+}
+
+// カテゴリ編集（既存のopenCategoryEditModalを強化）
+async function loadCategoryManage(){
+  const el=document.getElementById('category-manage-list');
+  const {data}=await db.from('categories').select('*').order('sort_order');
+  if(!data||data.length===0){el.innerHTML='<div class="empty">カテゴリなし</div>';return;}
+  el.innerHTML=data.map(c=>`<div class="doc-item">
+    <div class="doc-icon blue" style="font-size:20px;">${c.icon||'📄'}</div>
+    <div class="doc-info">
+      <div class="doc-name">${esc(c.name)} <span style="font-size:11px;color:var(--text-muted);margin-left:4px;">${c.type==='custom'?'カスタム':c.type==='rules'?'就業規則':'マニュアル'}</span></div>
+      <div class="doc-meta">表示順: ${c.sort_order} · ${c.is_visible?'表示中':'非表示'}</div>
+    </div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;">
+      <button class="btn btn-ghost" onclick="openCategoryEditModal(${c.id},'${encodeURIComponent(c.name)}','${esc(c.icon||'📄')}',${c.sort_order})">編集</button>
+      <button class="btn btn-ghost" onclick="toggleCatVisible(${c.id},${c.is_visible})">${c.is_visible?'非表示':'表示'}</button>
+      ${c.type==='custom'?`<button class="btn btn-danger" onclick="deleteCategory(${c.id})">削除</button>`:''}
+    </div>
+  </div>`).join('');
+}
+
+function openCategoryEditModal(id,nameEnc,icon,order){
+  document.getElementById('category-modal-title').textContent='カテゴリを編集';
+  document.getElementById('cat-edit-id').value=id;
+  document.getElementById('cat-name').value=decodeURIComponent(nameEnc);
+  document.getElementById('cat-order').value=order;
+  document.getElementById('cat-icon').value=icon;
+  document.querySelectorAll('#icon-picker span').forEach(s=>{
+    s.style.borderColor=s.textContent.trim()===icon?'var(--orange)':'transparent';
+  });
+  openModal('category-modal');
+}
+
+// ===== MENU SETTINGS =====
+let menuSettings=[];
+
+async function loadMenuSettings(){
+  const {data}=await db.from('menu_settings').select('*').order('sort_order');
+  menuSettings=data||[];
+  renderFixedNav();
+  renderBottomNav();
+}
+
+function renderFixedNav(){
+  const el=document.getElementById('fixed-nav');
+  if(!el)return;
+  el.innerHTML=menuSettings.filter(m=>m.is_visible).map((m,idx)=>`
+    <div class="nav-item ${idx===0?'active':''}" id="nav-${m.key}" onclick="switchTab('${m.key}',this)">
+      <span class="nav-icon">${m.icon}</span>${esc(m.label)}
+    </div>`).join('');
+}
+
+function renderBottomNav(){
+  const el=document.getElementById('bottom-nav-inner');
+  if(!el)return;
+  // 施術関連カテゴリを取得
+  const shijutsuCat=allCategories.find(c=>c.name==='施術関連'&&c.type==='custom');
+  el.innerHTML=`
+    <div class="bn-item active" onclick="switchTab('notice',null);setBottomNav(this)"><span class="bn-icon">🔔</span>お知らせ</div>
+    <div class="bn-item" onclick="switchTab('attendance',null);setBottomNav(this)"><span class="bn-icon">🕐</span>勤怠</div>
+    <div class="bn-item" onclick="switchTab('rules',null);setBottomNav(this)"><span class="bn-icon">📋</span>規則</div>
+    ${shijutsuCat?`<div class="bn-item" onclick="switchToCustomCat(${shijutsuCat.id},'施術関連','📖',null);setBottomNav(this)"><span class="bn-icon">📖</span>施術</div>`:''}
+    <div class="bn-item" onclick="switchTab('contact',null);setBottomNav(this)"><span class="bn-icon">📞</span>連絡先</div>
+    <div class="bn-item" onclick="confirmLogout()"><span class="bn-icon">⏏️</span>ログアウト</div>
+  `;
+}
+
+async function loadMenuSettingsList(){
+  const el=document.getElementById('menu-settings-list');
+  const {data}=await db.from('menu_settings').select('*').order('sort_order');
+  if(!data||data.length===0){el.innerHTML='<div class="empty">設定なし</div>';return;}
+  el.innerHTML=data.map(m=>`<div class="doc-item">
+    <div class="doc-icon blue" style="font-size:20px;">${m.icon}</div>
+    <div class="doc-info">
+      <div class="doc-name">${esc(m.label)}</div>
+      <div class="doc-meta">表示順: ${m.sort_order} · ${m.is_visible?'表示中':'非表示'} · キー: ${m.key}</div>
+    </div>
+    <button class="btn btn-ghost" onclick="openMenuEditModal(${m.id},'${encodeURIComponent(m.label)}','${m.icon}',${m.sort_order},${m.is_visible})">編集</button>
+  </div>`).join('');
+}
+
+function openMenuEditModal(id,labelEnc,icon,order,visible){
+  document.getElementById('me-id').value=id;
+  document.getElementById('me-label').value=decodeURIComponent(labelEnc);
+  document.getElementById('me-icon').value=icon;
+  document.getElementById('me-order').value=order;
+  document.getElementById('me-visible').checked=visible;
+  document.querySelectorAll('#menu-icon-picker span').forEach(s=>{
+    s.style.borderColor=s.textContent.trim()===icon?'var(--orange)':'transparent';
+  });
+  openModal('menu-edit-modal');
+}
+
+function selectMenuIcon(el){
+  document.querySelectorAll('#menu-icon-picker span').forEach(s=>s.style.borderColor='transparent');
+  el.style.borderColor='var(--orange)';
+  document.getElementById('me-icon').value=el.textContent.trim();
+}
+
+async function saveMenuEdit(){
+  const id=document.getElementById('me-id').value;
+  const label=document.getElementById('me-label').value.trim();
+  const icon=document.getElementById('me-icon').value;
+  const order=parseInt(document.getElementById('me-order').value)||99;
+  const visible=document.getElementById('me-visible').checked;
+  if(!label){showToast('表示名を入力してください');return;}
+  const {error}=await db.from('menu_settings').update({label,icon,sort_order:order,is_visible:visible}).eq('id',id);
+  if(error){showToast('保存に失敗しました');return;}
+  closeModal('menu-edit-modal');
+  showToast('更新しました');
+  await loadMenuSettings();
+  loadMenuSettingsList();
+}
+
+// ===== DYNAMIC CATEGORIES =====
+let allCategories=[];
+
+async function loadDynamicNav(){
+  const {data}=await db.from('categories').select('*').eq('is_visible',true).order('sort_order');
+  allCategories=data||[];
+  const menuCats=allCategories.filter(c=>c.type==='custom'&&c.section==='menu');
+  const otherCats=allCategories.filter(c=>c.type==='custom'&&c.section!=='menu');
+  const navEl=document.getElementById('custom-nav');
+  let html='';
+  if(menuCats.length>0){
+    html+=menuCats.map(c=>`<div class="nav-item" onclick="switchToCustomCat(${c.id},'${esc(c.name)}','${esc(c.icon||'📄')}',this)"><span class="nav-icon">${c.icon||'📄'}</span>${esc(c.name)}</div>`).join('');
+  }
+  if(otherCats.length>0){
+    html+=`<div class="nav-label">その他</div>`+
+      otherCats.map(c=>`<div class="nav-item" onclick="switchToCustomCat(${c.id},'${esc(c.name)}','${esc(c.icon||'📄')}',this)"><span class="nav-icon">${c.icon||'📄'}</span>${esc(c.name)}</div>`).join('');
+  }
+  navEl.innerHTML=html;
+}
+
+async function switchToCustomCat(catId,catName,catIcon,el){
+  document.querySelectorAll('.tab-content').forEach(t=>t.style.display='none');
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('tab-custom-category').style.display='block';
+  if(el)el.classList.add('active');
+  document.getElementById('topbar-title').textContent=`${catIcon} ${catName}`;
+  document.getElementById('custom-cat-title').textContent=catName;
+  const addBtn=document.getElementById('custom-cat-add-btn');
+  if(addBtn){
+    addBtn.onclick=()=>openContentModalForCat(catId);
+  }
+  closeSidebar();
+  const isAdmin=currentProfile&&currentProfile.role==='admin';
+  const el2=document.getElementById('custom-category-list');
+  el2.innerHTML='<div class="loading">読み込み中...</div>';
+  const {data}=await db.from('contents').select('*').eq('category_id',catId).order('created_at',{ascending:false});
+  if(!data||data.length===0){
+    el2.innerHTML=`<div class="empty">${catIcon} ${esc(catName)}のコンテンツはまだありません${isAdmin?'<br><small>右上の「+ 追加」ボタンから追加できます</small>':''}</div>`;
+    return;
+  }
+  el2.innerHTML=data.map(c=>`<div class="doc-item">
+    <div class="doc-icon blue" onclick="showDetail('${esc(c.title)}','${encodeURIComponent(c.body||'')}','${encodeURIComponent(c.file_url||'')}')" style="cursor:pointer;">${catIcon}</div>
+    <div class="doc-info" onclick="showDetail('${esc(c.title)}','${encodeURIComponent(c.body||'')}','${encodeURIComponent(c.file_url||'')}')" style="cursor:pointer;">
+      <div class="doc-name">${esc(c.title)}</div>
+      <div class="doc-meta">${formatDate(c.updated_at)}</div>
+    </div>
+    ${isAdmin?`<div style="display:flex;gap:6px;flex-shrink:0;">
+      <button class="btn btn-ghost" onclick="openContentEditModal(${c.id},'${encodeURIComponent(c.title)}','${encodeURIComponent(c.body||'')}','${encodeURIComponent(c.file_url||'')}',${catId})">編集</button>
+      <button class="btn btn-danger" onclick="deleteContent(${c.id});switchToCustomCat(${catId},'${esc(catName)}','${catIcon}',null)">削除</button>
+    </div>`:'<span style="color:var(--text-muted);">›</span>'}
+  </div>`).join('');
+}
+
+function openContentModalForCat(catId){
+  selectedFile=null;
+  document.getElementById('upload-label').textContent='クリックまたはドラッグ&ドロップ';
+  document.getElementById('progress-bar').style.display='none';
+  const sel=document.getElementById('cm-category-id');
+  sel.innerHTML='<option>読み込み中...</option>';
+  openModal('content-modal');
+  // DB から全カテゴリを取得してから選択肢を更新
+  db.from('categories').select('*').eq('is_visible',true).order('sort_order').then(({data})=>{
+    allCategories=data||[];
+    sel.innerHTML=allCategories.map(c=>`<option value="${c.id}" ${c.id===catId?'selected':''}>${c.icon||'📄'} ${esc(c.name)}</option>`).join('');
+  });
+}
+
+function openContentModalForType(type){
+  selectedFile=null;
+  document.getElementById('upload-label').textContent='クリックまたはドラッグ&ドロップ';
+  document.getElementById('progress-bar').style.display='none';
+  const sel=document.getElementById('cm-category-id');
+  const cats=allCategories.filter(c=>c.type===type&&c.is_visible);
+  if(cats.length>0){
+    sel.innerHTML=cats.map(c=>`<option value="${c.id}">${c.icon||'📄'} ${esc(c.name)}</option>`).join('');
+  } else {
+    // 同タイプのカテゴリがない場合は全カテゴリを表示
+    sel.innerHTML=allCategories.filter(c=>c.is_visible).map(c=>`<option value="${c.id}">${c.icon||'📄'} ${esc(c.name)}</option>`).join('');
+  }
+  openModal('content-modal');
+}
+
+// カテゴリ管理は上部で定義済み
+
+function openCategoryModal(){
+  document.getElementById('category-modal-title').textContent='カテゴリを追加';
+  document.getElementById('cat-edit-id').value='';
+  document.getElementById('cat-name').value='';
+  document.getElementById('cat-order').value='50';
+  document.getElementById('cat-icon').value='📄';
+  document.querySelectorAll('#icon-picker span').forEach(s=>s.style.borderColor='transparent');
+  openModal('category-modal');
+}
+
+function selectIcon(el){
+  document.querySelectorAll('#icon-picker span').forEach(s=>s.style.borderColor='transparent');
+  el.style.borderColor='var(--orange)';
+  document.getElementById('cat-icon').value=el.textContent;
+}
+
+async function saveCategory(){
+  const editId=document.getElementById('cat-edit-id').value;
+  const name=document.getElementById('cat-name').value.trim();
+  const icon=document.getElementById('cat-icon').value;
+  const order=parseInt(document.getElementById('cat-order').value)||50;
+  const section=document.getElementById('cat-section')?document.getElementById('cat-section').value:'other';
+  if(!name){showToast('カテゴリ名を入力してください');return;}
+  if(editId){
+    const {error}=await db.from('categories').update({name,icon,sort_order:order}).eq('id',editId);
+    if(error){showToast('更新に失敗しました');return;}
+    showToast('更新しました');
+  } else {
+    const {error}=await db.from('categories').insert({name,icon,type:'custom',sort_order:order,is_visible:true,section});
+    if(error){
+      // sectionカラムがない場合はなしで再試行
+      const {error:e2}=await db.from('categories').insert({name,icon,type:'custom',sort_order:order,is_visible:true});
+      if(e2){showToast('追加に失敗しました');return;}
+    }
+    showToast('カテゴリを追加しました');
+  }
+  closeModal('category-modal');
+  await loadDynamicNav();
+  loadCategoryManage();
+}
+
+async function toggleCatVisible(id,current){
+  await db.from('categories').update({is_visible:!current}).eq('id',id);
+  showToast(current?'非表示にしました':'表示しました');
+  await loadDynamicNav();
+  loadCategoryManage();
+}
+
+async function deleteCategory(id){
+  if(!confirm('このカテゴリを削除しますか？\n紐づくコンテンツも削除されます。'))return;
+  await db.from('contents').delete().eq('category_id',id);
+  await db.from('categories').delete().eq('id',id);
+  showToast('削除しました');
+  await loadDynamicNav();
+  loadCategoryManage();
+}
+
+// ===== QR CODE MANAGEMENT =====
+async function loadQRCodes(){
+  const el=document.getElementById('qr-list');
+  const {data:stores}=await db.from('stores').select('*').order('id');
+  if(!stores||stores.length===0){el.innerHTML='<div class="empty">店舗なし</div>';return;}
+  const baseUrl=window.location.origin+window.location.pathname;
+  el.innerHTML='<div style="padding:0;">'+stores.map(s=>{
+    const url=`${baseUrl}?qr=${s.qr_token}`;
+    return `<div style="padding:16px;border-bottom:1px solid var(--border);">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+        <div>
+          <div style="font-size:14px;font-weight:600;">${esc(s.name)}</div>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">ID: ${s.id}</div>
+        </div>
+        <div style="display:flex;gap:6px;">
+          <button class="btn btn-orange no-print" onclick="printQR('${s.id}','${esc(s.name)}','${url}')">🖨️ 印刷</button>
+          <button class="btn btn-ghost no-print" onclick="regenToken(${s.id})">🔄 更新</button>
+        </div>
+      </div>
+      <div id="qr-canvas-${s.id}" style="display:flex;justify-content:center;"></div>
+      <div style="font-size:10px;color:var(--text-muted);text-align:center;margin-top:6px;word-break:break-all;">${url}</div>
+    </div>`;
+  }).join('')+'</div>';
+  // QRコード生成
+  stores.forEach(s=>{
+    const url=`${baseUrl}?qr=${s.qr_token}`;
+    const container=document.getElementById(`qr-canvas-${s.id}`);
+    if(container)generateQR(container,url);
+  });
+}
+
+function generateQR(container,url){
+  const size=180;
+  const qr=qrcode(0,'M');
+  qr.addData(url);qr.make();
+  container.innerHTML=qr.createImgTag(4,0);
+  const img=container.querySelector('img');
+  if(img){img.style.width=size+'px';img.style.height=size+'px';}
+}
+
+async function regenToken(storeId){
+  if(!confirm('QRコードを更新しますか？\n古いQRコードは使えなくなります。'))return;
+  const {error}=await db.rpc('update_store_token',{store_id_input:storeId});
+  if(error){
+    // RPCがない場合は直接update
+    const newToken=Array.from(crypto.getRandomValues(new Uint8Array(32))).map(b=>b.toString(16).padStart(2,'0')).join('');
+    await db.from('stores').update({qr_token:newToken}).eq('id',storeId);
+  }
+  showToast('QRコードを更新しました。新しいQRコードを印刷してください。');
+  loadQRCodes();
+}
+
+function printQR(storeId,storeName,url){
+  const container=document.getElementById(`qr-canvas-${storeId}`);
+  const imgTag=container?container.innerHTML:'';
+  const printEl=document.getElementById('print-area');
+  printEl.innerHTML=`
+    <div style="font-family:'Hiragino Kaku Gothic ProN','Hiragino Sans','Yu Gothic UI',Meiryo,sans-serif;text-align:center;padding:20mm;">
+      <div style="width:48px;height:48px;background:#F26A1B;border-radius:12px;display:inline-flex;align-items:center;justify-content:center;color:#fff;font-size:20px;font-weight:700;margin-bottom:12px;">RH</div>
+      <div style="font-size:24px;font-weight:700;color:#F26A1B;margin-bottom:4px;">${storeName}</div>
+      <div style="font-size:14px;color:#888;margin-bottom:20px;">ランナーズハイ 勤怠打刻QRコード</div>
+      <div style="display:flex;justify-content:center;margin-bottom:16px;">${imgTag}</div>
+      <div style="font-size:13px;color:#555;margin-bottom:8px;">📱 スマホのカメラで読み取って打刻してください</div>
+      <div style="font-size:10px;color:#999;">${url}</div>
+      <div style="margin-top:24px;padding-top:16px;border-top:1px solid #eee;font-size:11px;color:#aaa;">このQRコードは院内専用です。外部への持ち出し・共有は禁止です。</div>
+    </div>`;
+  window.print();
+}
+
+// ===== QR CLOCK (打刻ページ) =====
+let qrStoreData=null,qrUserProfile=null,qrTodayRecord=null,qrActiveBreak=null;
+
+async function initQRPage(token){
+  document.getElementById('login-screen').style.display='none';
+  document.getElementById('app-screen').style.display='none';
+  document.getElementById('qr-clock-screen').classList.add('visible');
+  // 時計スタート
+  function tick(){
+    const now=new Date();
+    document.getElementById('qr-clock-time').textContent=now.toLocaleTimeString('ja-JP');
+    const days=['日','月','火','水','木','金','土'];
+    document.getElementById('qr-clock-date').textContent=`${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日（${days[now.getDay()]}）`;
+  }
+  tick();setInterval(tick,1000);
+  // 店舗情報取得
+  const {data:store}=await db.from('stores').select('*').eq('qr_token',token).single();
+  if(!store){
+    document.getElementById('qr-store-name').textContent='無効なQRコードです';
+    return;
+  }
+  qrStoreData=store;
+  document.getElementById('qr-store-name').textContent=store.name;
+  // セッション確認
+  const {data:{session}}=await db.auth.getSession();
+  if(session){
+    await qrLoadUser(session.user);
+  }
+}
+
+async function qrDoLogin(){
+  const email=document.getElementById('qr-email').value.trim();
+  const pass=document.getElementById('qr-pass').value;
+  const err=document.getElementById('qr-login-error');
+  err.textContent='';
+  if(!email||!pass){err.textContent='メールとパスワードを入力してください';return;}
+  const {data,error}=await db.auth.signInWithPassword({email,password:pass});
+  if(error){err.textContent='メールアドレスまたはパスワードが正しくありません';return;}
+  await qrLoadUser(data.user);
+}
+
+async function qrLoadUser(user){
+  const {data:profile}=await db.from('profiles').select('*').eq('id',user.id).single();
+  if(!profile||!profile.is_active){
+    document.getElementById('qr-login-error').textContent='このアカウントは無効です';
+    await db.auth.signOut();return;
+  }
+  qrUserProfile=profile;
+  document.getElementById('qr-login-area').style.display='none';
+  document.getElementById('qr-punch-area').style.display='block';
+  document.getElementById('qr-user-info').textContent=`👤 ${profile.name}`;
+  await qrLoadToday(user.id);
+}
+
+async function qrLoadToday(userId){
+  const today=new Date().toISOString().slice(0,10);
+  const {data:atts}=await db.from('attendance').select('*').eq('user_id',userId).gte('clock_in',today+'T00:00:00').order('clock_in',{ascending:false}).limit(1);
+  qrTodayRecord=atts&&atts.length>0?atts[0]:null;
+  if(qrTodayRecord){
+    const {data:br}=await db.from('breaks').select('*').eq('attendance_id',qrTodayRecord.id).is('break_end',null).limit(1);
+    qrActiveBreak=br&&br.length>0?br[0]:null;
+  } else qrActiveBreak=null;
+  qrUpdateUI();
+}
+
+function qrUpdateUI(){
+  const btnIn=document.getElementById('qr-btn-in');
+  const btnOut=document.getElementById('qr-btn-out');
+  const btnBreak=document.getElementById('qr-btn-break');
+  const btnBreakEnd=document.getElementById('qr-btn-breakend');
+  [btnIn,btnOut,btnBreak,btnBreakEnd].forEach(b=>b.style.display='none');
+  if(!qrTodayRecord){
+    btnIn.style.display='block';
+  } else if(qrTodayRecord.clock_out){
+    const el=document.getElementById('qr-result');
+    const i=new Date(qrTodayRecord.clock_in),o=new Date(qrTodayRecord.clock_out);
+    el.className='qr-result success';
+    el.textContent=`✅ 本日の退勤済 (${fmtTime(i)}〜${fmtTime(o)})`;
+    el.style.display='block';
+  } else if(qrActiveBreak){
+    btnBreakEnd.style.display='block';
+  } else {
+    btnOut.style.display='block';
+    btnBreak.style.display='block';
+  }
+}
+
+function qrShowResult(msg,type='success'){
+  const el=document.getElementById('qr-result');
+  el.className=`qr-result ${type}`;
+  el.textContent=msg;
+  el.style.display='block';
+}
+
+async function qrClockIn(){
+  const {data,error}=await db.from('attendance').insert({
+    user_id:qrUserProfile.id,user_name:qrUserProfile.name,
+    clock_in:new Date().toISOString(),
+    store_id:qrStoreData.id,store_name:qrStoreData.name
+  }).select().single();
+  if(error){qrShowResult('打刻に失敗しました','error');return;}
+  qrTodayRecord=data;qrActiveBreak=null;
+  qrShowResult(`✅ 出勤打刻完了！${fmtTime(new Date(data.clock_in))} @ ${qrStoreData.name}`);
+  qrUpdateUI();
+}
+
+async function qrClockOut(){
+  if(!qrTodayRecord)return;
+  if(qrActiveBreak)await qrBreakEnd();
+  const {data,error}=await db.from('attendance').update({clock_out:new Date().toISOString()}).eq('id',qrTodayRecord.id).select().single();
+  if(error){qrShowResult('打刻に失敗しました','error');return;}
+  qrTodayRecord=data;
+  const i=new Date(data.clock_in),o=new Date(data.clock_out);
+  const bound=Math.floor((o-i)/60000);
+  qrShowResult(`✅ 退勤打刻完了！${fmtTime(i)}〜${fmtTime(o)} 拘束${fmtMin(bound)} @ ${qrStoreData.name}`);
+  qrUpdateUI();
+}
+
+async function qrBreakStart(){
+  if(!qrTodayRecord)return;
+  const {data,error}=await db.from('breaks').insert({attendance_id:qrTodayRecord.id,user_id:qrUserProfile.id,break_start:new Date().toISOString()}).select().single();
+  if(error){qrShowResult('休憩開始に失敗しました','error');return;}
+  qrActiveBreak=data;
+  qrShowResult(`☕ 休憩開始 ${fmtTime(new Date())}`);
+  qrUpdateUI();
+}
+
+async function qrBreakEnd(){
+  if(!qrActiveBreak)return;
+  const {data,error}=await db.from('breaks').update({break_end:new Date().toISOString()}).eq('id',qrActiveBreak.id).select().single();
+  if(error){qrShowResult('休憩終了に失敗しました','error');return;}
+  const min=Math.floor((new Date(data.break_end)-new Date(data.break_start))/60000);
+  qrActiveBreak=null;
+  qrShowResult(`✅ 休憩終了 (${fmtMin(min)}の休憩)`);
+  qrUpdateUI();
+}
+
+async function qrLogout(){
+  await db.auth.signOut();
+  qrUserProfile=null;qrTodayRecord=null;qrActiveBreak=null;
+  document.getElementById('qr-login-area').style.display='block';
+  document.getElementById('qr-punch-area').style.display='none';
+  document.getElementById('qr-result').style.display='none';
+  document.getElementById('qr-email').value='';
+  document.getElementById('qr-pass').value='';
+}
+
+// INIT
+const urlParams=new URLSearchParams(window.location.search);
+const qrToken=urlParams.get('qr');
+if(qrToken){
+  // QR打刻モード
+  initQRPage(qrToken);
+} else {
+  // 通常ポータルモード
+  db.auth.getSession().then(({data:{session}})=>{if(session)initApp(session.user);});
+}
+document.querySelectorAll('.modal-overlay').forEach(el=>{el.addEventListener('click',e=>{if(e.target===el)el.classList.remove('show');});});
+</script>
+</body>
+</html>
