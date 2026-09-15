@@ -277,6 +277,24 @@ html,body{height:100%;font-family:var(--font);background:var(--bg);color:var(--t
 </head>
 <body>
 
+<!-- 連絡先編集モーダル -->
+<div class="modal-overlay" id="edit-contact-modal">
+  <div class="modal">
+    <h3>連絡先を編集</h3>
+    <input type="hidden" id="ec-id">
+    <label>名前</label><input type="text" id="ec-name" placeholder="氏名または部署名">
+    <label>役職・役割</label><input type="text" id="ec-role" placeholder="例：大宮院 院長">
+    <label>店舗</label><input type="text" id="ec-store" placeholder="例：狭山ヶ丘院">
+    <label>電話番号</label><input type="text" id="ec-phone" placeholder="090-XXXX-XXXX">
+    <label>メール（任意）</label><input type="text" id="ec-email" placeholder="name@example.com">
+    <div class="error-msg" id="ec-error"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('edit-contact-modal')">キャンセル</button>
+      <button class="btn btn-orange" onclick="saveContactEdit()">保存</button>
+    </div>
+  </div>
+</div>
+
 <!-- アカウント編集モーダル -->
 <div class="modal-overlay" id="edit-account-modal">
   <div class="modal">
@@ -1341,7 +1359,10 @@ async function loadContacts(){
     <div class="contact-avatar" style="background:${colors[i%colors.length]};">${c.name.charAt(0)}</div>
     <div class="contact-info"><div class="contact-name">${esc(c.name)}${c.store?`<span style="font-size:11px;color:var(--text-muted);margin-left:6px;">${esc(c.store)}</span>`:''}</div><div class="contact-role">${esc(c.role||'')}</div></div>
     ${c.phone?`<a href="tel:${esc(c.phone)}" style="font-size:12px;color:var(--blue);font-weight:500;">${esc(c.phone)}</a>`:''}
-    ${isAdmin?`<button class="btn btn-danger" style="margin-left:8px;" onclick="deleteContact(${c.id})">削除</button>`:''}
+    ${isAdmin?`<div style="display:flex;gap:6px;margin-left:8px;">
+      <button class="btn btn-ghost" onclick="openEditContactModal(${c.id},'${encodeURIComponent(c.name)}','${encodeURIComponent(c.role||'')}','${encodeURIComponent(c.store||'')}','${encodeURIComponent(c.phone||'')}','${encodeURIComponent(c.email||'')}')">編集</button>
+      <button class="btn btn-danger" onclick="deleteContact(${c.id})">削除</button>
+    </div>`:''}
   </div>`).join('')+'</div>';
 }
 
@@ -1409,6 +1430,33 @@ async function saveContent(){
   closeModal('content-modal');
   ['cm-title','cm-body'].forEach(id=>document.getElementById(id).value='');
   selectedFile=null;showToast('追加しました');loadManageContents();
+}
+
+function openEditContactModal(id,nameEnc,roleEnc,storeEnc,phoneEnc,emailEnc){
+  document.getElementById('ec-id').value=id;
+  document.getElementById('ec-name').value=decodeURIComponent(nameEnc);
+  document.getElementById('ec-role').value=decodeURIComponent(roleEnc);
+  document.getElementById('ec-store').value=decodeURIComponent(storeEnc);
+  document.getElementById('ec-phone').value=decodeURIComponent(phoneEnc);
+  document.getElementById('ec-email').value=decodeURIComponent(emailEnc);
+  document.getElementById('ec-error').textContent='';
+  openModal('edit-contact-modal');
+}
+
+async function saveContactEdit(){
+  const id=document.getElementById('ec-id').value;
+  const name=document.getElementById('ec-name').value.trim();
+  const role=document.getElementById('ec-role').value.trim();
+  const store=document.getElementById('ec-store').value.trim();
+  const phone=document.getElementById('ec-phone').value.trim();
+  const email=document.getElementById('ec-email').value.trim();
+  const err=document.getElementById('ec-error');
+  if(!name){err.textContent='名前を入力してください';return;}
+  const {error}=await db.from('contacts').update({name,role,store,phone,email}).eq('id',id);
+  if(error){err.textContent='保存に失敗しました';return;}
+  closeModal('edit-contact-modal');
+  showToast('更新しました');
+  loadContacts();
 }
 
 // ===== MANAGE CONTACTS =====
