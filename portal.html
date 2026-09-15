@@ -1305,6 +1305,7 @@ async function loadNotices(){
   const ids=data.map(n=>n.id);
   data.forEach(n=>noticeCache[n.id]=n);
   const {data:likes}=await db.from('notice_likes').select('*').in('notice_id',ids);
+  const {data:noticeComments}=await db.from('notice_comments').select('*').in('notice_id',ids).order('created_at');
   el.innerHTML=data.map(n=>{
     const noticeLikes=(likes||[]).filter(l=>l.notice_id===n.id);
     const myLike=noticeLikes.find(l=>l.user_id===currentUser.id);
@@ -1328,6 +1329,16 @@ async function loadNotices(){
           <button onclick="toggleLike(${n.id})" style="background:${myLike?'var(--yellow-light)':'var(--bg)'};border:1px solid ${myLike?'var(--yellow)':'var(--border)'};border-radius:20px;padding:3px 10px;cursor:pointer;font-size:13px;">
             👍 ${noticeLikes.length}
           </button>
+          <button onclick="toggleComments(${n.id})" style="background:var(--bg);border:1px solid var(--border);border-radius:20px;padding:3px 10px;cursor:pointer;font-size:13px;">
+            💬 <span id="comment-count-${n.id}">${(noticeComments||[]).filter(c=>c.notice_id===n.id).length}</span>
+          </button>
+        </div>
+      </div>
+      <div id="comments-${n.id}" style="display:none;margin-top:10px;border-top:1px solid var(--border);padding-top:10px;">
+        <div id="comment-list-${n.id}"></div>
+        <div style="display:flex;gap:8px;margin-top:8px;">
+          <input type="text" id="comment-input-${n.id}" placeholder="返信・質問を入力..." style="flex:1;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);font-size:13px;background:var(--bg);font-family:var(--font);">
+          <button onclick="postComment(${n.id})" class="btn btn-orange" style="padding:7px 14px;font-size:12px;">送信</button>
         </div>
       </div>
     </div>`;
@@ -1382,6 +1393,51 @@ async function uploadNoticeImage(file){
   if(error)return null;
   const {data}=db.storage.from('notice-images').getPublicUrl(path);
   return data.publicUrl;
+}
+
+async function toggleComments(noticeId){
+  const el=document.getElementById(`comments-${noticeId}`);
+  if(!el)return;
+  const isOpen=el.style.display!=='none';
+  el.style.display=isOpen?'none':'block';
+  if(!isOpen)loadComments(noticeId);
+}
+
+async function loadComments(noticeId){
+  const el=document.getElementById(`comment-list-${noticeId}`);
+  if(!el)return;
+  const isAdmin=currentProfile&&currentProfile.role==='admin';
+  const {data}=await db.from('notice_comments').select('*').eq('notice_id',noticeId).order('created_at');
+  if(!data||data.length===0){el.innerHTML='<div style="font-size:12px;color:var(--text-muted);padding:4px 0;">まだ返信はありません</div>';return;}
+  el.innerHTML=data.map(c=>`<div style="display:flex;gap:8px;margin-bottom:8px;align-items:flex-start;">
+    <div style="width:28px;height:28px;border-radius:50%;background:var(--orange);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;">${c.user_name.charAt(0)}</div>
+    <div style="flex:1;background:var(--bg);border-radius:8px;padding:7px 10px;">
+      <div style="font-size:11px;font-weight:600;color:var(--text-sub);margin-bottom:3px;">${esc(c.user_name)} · ${formatDate(c.created_at)}</div>
+      <div style="font-size:13px;">${esc(c.body)}</div>
+    </div>
+    ${(isAdmin||c.user_id===currentUser.id)?`<button onclick="deleteComment(${c.id},${noticeId})" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:12px;padding:2px;">✕</button>`:''}
+  </div>`).join('');
+  // コメント数を更新
+  const countEl=document.getElementById(`comment-count-${noticeId}`);
+  if(countEl)countEl.textContent=data.length;
+}
+
+async function postComment(noticeId){
+  const input=document.getElementById(`comment-input-${noticeId}`);
+  const body=input.value.trim();
+  if(!body)return;
+  const {error}=await db.from('notice_comments').insert({
+    notice_id:noticeId,user_id:currentUser.id,user_name:currentProfile.name,body
+  });
+  if(error){showToast('送信に失敗しました');return;}
+  input.value='';
+  loadComments(noticeId);
+}
+
+async function deleteComment(commentId,noticeId){
+  if(!confirm('このコメントを削除しますか？'))return;
+  await db.from('notice_comments').delete().eq('id',commentId);
+  loadComments(noticeId);
 }
 
 async function toggleLike(noticeId){
