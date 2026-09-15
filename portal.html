@@ -1780,12 +1780,13 @@ function openContentModalForCat(catId){
   document.getElementById('upload-label').textContent='クリックまたはドラッグ&ドロップ';
   document.getElementById('progress-bar').style.display='none';
   const sel=document.getElementById('cm-category-id');
-  // 毎回DBから最新のカテゴリを取得
+  sel.innerHTML='<option>読み込み中...</option>';
+  openModal('content-modal');
+  // DB から全カテゴリを取得してから選択肢を更新
   db.from('categories').select('*').eq('is_visible',true).order('sort_order').then(({data})=>{
     allCategories=data||[];
     sel.innerHTML=allCategories.map(c=>`<option value="${c.id}" ${c.id===catId?'selected':''}>${c.icon||'📄'} ${esc(c.name)}</option>`).join('');
   });
-  openModal('content-modal');
 }
 
 function openContentModalForType(type){
