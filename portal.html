@@ -844,6 +844,19 @@ const db=createClient(SUPABASE_URL,SUPABASE_KEY,{
 
 let currentUser=null,currentProfile=null,currentTab='notice';
 let todayRecord=null,activeBreak=null,selectedFile=null;
+
+// JSTで今日の日付をYYYY-MM-DD形式で取得
+function getTodayJST(){
+  const now=new Date();
+  const jst=new Date(now.getTime()+9*60*60*1000);
+  return jst.toISOString().slice(0,10);
+}
+// JSTの今日の開始時刻（UTC）を取得
+function getTodayStartUTC(){
+  const today=getTodayJST();
+  return today+'T15:00:00.000Z'; // JST 00:00 = UTC 15:00 (前日)
+  // より正確には: new Date(today+'T00:00:00+09:00').toISOString()
+}
 let editBreaks=[];
 const EDIT_LIMIT_HOURS=48;
 let realtimeTimer=null;
@@ -942,8 +955,8 @@ function startClock(){
 }
 
 async function loadTodayAttendance(){
-  const today=new Date().toISOString().slice(0,10);
-  const {data:attData}=await db.from('attendance').select('*').eq('user_id',currentUser.id).gte('clock_in',today+'T00:00:00').order('clock_in',{ascending:false}).limit(1);
+  const todayStart=new Date(getTodayJST()+'T00:00:00+09:00').toISOString();
+  const {data:attData}=await db.from('attendance').select('*').eq('user_id',currentUser.id).gte('clock_in',todayStart).order('clock_in',{ascending:false}).limit(1);
   todayRecord=attData&&attData.length>0?attData[0]:null;
   if(todayRecord){
     const {data:brData}=await db.from('breaks').select('*').eq('attendance_id',todayRecord.id).is('break_end',null).limit(1);
@@ -1126,9 +1139,9 @@ function startRealtimeAuto(){stopRealtimeAuto();realtimeTimer=setInterval(loadRe
 function stopRealtimeAuto(){if(realtimeTimer){clearInterval(realtimeTimer);realtimeTimer=null;}}
 
 async function loadRealtime(){
-  const today=new Date().toISOString().slice(0,10);
+  const todayStart=new Date(getTodayJST()+'T00:00:00+09:00').toISOString();
   const {data:profiles}=await db.from('profiles').select('*').eq('is_active',true).order('name');
-  const {data:atts}=await db.from('attendance').select('*').gte('clock_in',today+'T00:00:00');
+  const {data:atts}=await db.from('attendance').select('*').gte('clock_in',todayStart);
   const {data:breaks}=await db.from('breaks').select('*');
   const now=new Date();
   document.getElementById('realtime-updated').textContent=`最終更新: ${fmtTime(now)} (30秒ごとに自動更新)`;
@@ -2245,8 +2258,8 @@ async function qrLoadUser(user){
 }
 
 async function qrLoadToday(userId){
-  const today=new Date().toISOString().slice(0,10);
-  const {data:atts}=await db.from('attendance').select('*').eq('user_id',userId).gte('clock_in',today+'T00:00:00').order('clock_in',{ascending:false}).limit(1);
+  const todayStart=new Date(getTodayJST()+'T00:00:00+09:00').toISOString();
+  const {data:atts}=await db.from('attendance').select('*').eq('user_id',userId).gte('clock_in',todayStart).order('clock_in',{ascending:false}).limit(1);
   qrTodayRecord=atts&&atts.length>0?atts[0]:null;
   if(qrTodayRecord){
     const {data:br}=await db.from('breaks').select('*').eq('attendance_id',qrTodayRecord.id).is('break_end',null).limit(1);
